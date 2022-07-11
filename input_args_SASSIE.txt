@@ -1,0 +1,11 @@
+--base_dir=/Users/suzanne/Google Drive/SASSIE
+--mapDomain=-160, -138, 69, 80
+--shipLocation=-150, 73
+--smallDomain=100000
+--strdate=20180929
+--satelliteICE=nsidc-0081
+--satelliteSSS=JPL-L2B-NRT
+--UTOids=300534060649670, 300534062158480
+--swiftIDS=12
+--hourstoPlot=48
+--figstr=test

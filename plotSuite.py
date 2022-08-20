@@ -57,6 +57,7 @@ def plotSuite(args):
     outHeaders = {'Date':'Date','Lat':'Lat','Lon':'Lon',
        'DateTimeStr':'Date',
        'DateTime':'Date',
+       'Depth':'Depth',
        'CTD-S2':'Salinity',
        'S1':'Salinity',
        'Salinity-0':'Salinity',
@@ -164,7 +165,7 @@ def plotSuite(args):
             # dfWrite.to_excel(writer, sheet_name=sheetname)
 
             # writes/append  data to csv file
-            utoFile = f'{args.base_dir}/UTO_{binf["name"][0]}-{int(binf["name"][1]):02d}.csv'
+            utoFile = f'{args.base_dir}/csv/UTO_{binf["name"][0]}-{int(binf["name"][1]):02d}.csv'
             print('utoFile',utoFile)
             if os.path.exists(utoFile):
                 dfPrev = pd.read_csv(utoFile)
@@ -293,7 +294,7 @@ def plotSuite(args):
             # dfSwiftWrite.to_excel(writer, sheet_name=sheetname)
 
             # write/append data to csv file
-            swiftFile = f'{args.base_dir}/Swift{ID}.csv'
+            swiftFile = f'{args.base_dir}/csv/Swift{ID}.csv'
             if os.path.exists(swiftFile):
                 dfswiftPrev = pd.read_csv(swiftFile)
                 dfswiftPrev = pd.concat([dfswiftPrev,dfswiftNew],axis=0,ignore_index=True)
@@ -348,33 +349,34 @@ def plotSuite(args):
 
         IDs = [item for item in args.gliderIDs.split(',')]
         for ID in IDs:
-            print(ID)
             print(IDdict[ID])
             dfwaveGlider = pfields.getWaveGlider(args,ID)
             dfwaveGlider.reset_index(inplace=True)  # used for plotting
-            print('line 327 Glider ID:',ID)
-            print(dfwaveGlider.head(20))
             print(dfwaveGlider.tail(20))
+            columnsWrite = ['Date','Lat','Lon','Temperature','Salinity','Depth']
 
-            columnsWrite = ['Date','Lat','Lon','Temperature','Salinity']
+            # make a plotting mask
+            endPlot = dfwaveGlider['DateTime'].iloc[-1]
+            startPlot = endPlot - dt.timedelta(hours = args.hourstoPlot)
+            plot = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) #mask
 
             if not dfwaveGlider['Lon'].isnull().all():
-                if not dfwaveGlider['Temperature'].isnull().all():
+                if not dfwaveGlider.loc[plot,'Temperature'].isnull().all():
                     waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
-                    waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'], dfwaveGlider['index'], dfwaveGlider['Temperature'],
+                    waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
                                cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                     if args.smallDomain is not None:
-                        waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'], dfwaveGlider['index'], dfwaveGlider['Temperature'],
+                        waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
                                    cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                 else:
                     waveGliderTlabel=f"{IDdict[ID]} No SST data."
 
                 if not dfwaveGlider['Salinity'].isnull().all():
                     waveGliderSlabel=f"{IDdict[ID]}: {dfwaveGlider['Salinity'].iloc[-1]:.2f} {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
-                    waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'],dfwaveGlider['index'],dfwaveGlider['Salinity'],
+                    waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot],dfwaveGlider['Salinity'][plot],
                                cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
                     if args.smallDomain is not None:
-                        waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'],dfwaveGlider['index'],dfwaveGlider['Salinity'],
+                        waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot],dfwaveGlider['Salinity'][plot],
                                    cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
                 else:
                     waveGliderSlabel=f"{IDdict[ID]} No SSS data."
@@ -398,23 +400,15 @@ def plotSuite(args):
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=waveGliderSlabel))
 
-            dfwaveGliderNew = dfwaveGlider[columnsWrite]
-            print('line 401 plotSuite')
-            print(dfwaveGliderNew.tail(20))
-            # dfswiftNew.rename(columns=outHeaders,inplace=True)
-            # need to made Date a string for .csv ?
-            # sheetname = f'Swift{ID}'
-            # dfSwiftWrite.to_excel(writer, sheet_name=sheetname)
-
-            # # write/append data to csv file
-            gliderFile = f'{args.base_dir}/WaveGlider_{IDdict[ID]}.csv'
-            if os.path.exists(gliderFile):
-                dfwaveGliderPrev = pd.read_csv(gliderFile)
-                dfwaveGliderPrev = pd.concat([dfwaveGliderPrev,dfwaveGliderNew],axis=0,ignore_index=True)
-                dfwaveGliderPrev.drop_duplicates(subset=['Date','Lat','Lon'],keep='first',inplace=True)  # remove rows where interp T/S is different from original
-                dfwaveGliderPrev.to_csv(gliderFile,index=False)
-            else:
-                dfwaveGliderNew.to_csv(gliderFile,float_format='%.3f',index=False)
+            dfwaveGlider = dfwaveGlider[columnsWrite]
+            gliderFile = f'{args.base_dir}/csv/WaveGlider_{IDdict[ID]}.csv'
+            # if os.path.exists(gliderFile):
+            #     dfwaveGliderPrev = pd.read_csv(gliderFile)
+            #     dfwaveGliderPrev = pd.concat([dfwaveGliderPrev,dfwaveGliderNew],axis=0,ignore_index=True)
+            #     dfwaveGliderPrev.drop_duplicates(subset=['Date','Lat','Lon'],keep='first',inplace=True)  # remove rows where interp T/S is different from original
+            #     dfwaveGliderPrev.to_csv(gliderFile,index=False)
+            # else:
+            dfwaveGlider.to_csv(gliderFile,float_format='%.3f',index=False)
 
         # work the legends on the plots
         legend30 = ax0.legend(handles=waveGliderTpts,bbox_to_anchor=(1.1, 0.3), loc=2, borderaxespad=0.,fontsize=9,title='WaveGlider Data' )
@@ -476,13 +470,15 @@ def plotSuite(args):
     fig1.savefig(figstr1)
     fig11.savefig(figstr11)
 
+# lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
     # send figures to the ftp site
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
 
     # send the data files (csv) to the ftp site
-    os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput UTO_*.csv; bye"')
-    os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Swift*.csv; bye"')
-    os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Wave*.csv; bye"')
+    os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
+    # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Swift*.csv; bye"')
+    # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Wave*.csv; bye"')
+    # os.system(f'/usr/local/bin/lftp -u sassie --password 2Icy2Fresh! -e "mirror --only-newer /Users/suzanne/SASSIE/csv/ /FTP/insitu/data" sftp://ftp.polarscience.org')
         # plt.show(block=False)
         # plt.pause(0.001)
         # input('Press enter to close figures.')

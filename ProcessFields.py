@@ -580,36 +580,73 @@ def getWaveGlider(args,ID):
 
     # date time strings
     now = dt.datetime.now()
-    then = now - dt.timedelta(hours=args.hourstoPlot)
+    # then = now - dt.timedelta(hours=args.hourstoPlot)
     endDate = now.strftime('%Y-%m-%dT%H:%M:%S')
-    startDate = then.strftime('%Y-%m-%dT%H:%M:%S')
+    # startDate = then.strftime('%Y-%m-%dT%H:%M:%S')
     # if want data from beginning
-    # if ID == '102740746' or ID == '84929357':
-    #     startDate = '2022-08-14T19:00:00'
-    # elif ID == '1628052144' or ID == '511512553':
-    #     startDate = '2022-08-12T22:00:00'
-    print('line 589 in pfields',ID,startDate,endDate)
+    if ID == '102740746' or ID == '84929357':   # pull all the data, only plot the last args.hourstoPlot
+        startDate = '2022-08-14T19:00:00'
+    elif ID == '1628052144' or ID == '511512553':
+        startDate = '2022-08-12T22:00:00'
+    # print('line 589 in pfields',ID,startDate,endDate)
 
     for reportName in ['"AanderraaCT Sensor"','"GPS Waves Sensor Data"']:
         print(reportName)
         print(ID)
 
-        cmd = f'python {args.base_dir}/pyfiles/DataService.py --getReportData --vehicles {np.int(ID)} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
+        cmd = f'python {args.base_dir}/waveGlider/DataService.py --getReportData --vehicles {ID} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # waits until p ends and saves output and errors if needed
         out, err = p.communicate()  # both strings
 
         if "AanderraaCT Sensor" in reportName:
-            if str(err, 'utf-8') == '':
+            if str(err, 'utf-8') == '' and str(out,'utf-8') != '':
                 dataAS = list(eval(out))   # a string that is a list of dicts
-                dfAS = pd.DataFrame([item['timeStamp'],item['temperature (C)'],item['salinity (PSU)']] for item in dataAS)
-                dfAS.columns=['TimeStamp','Temperature','Salinity']
-                print(dfAS['TimeStamp'].tail(20))
+                print(dataAS)
+                # get the data out individually for each depth (longitude=0, depth=0.25, longitude=2, depth=1)
+                time0 = [item['timeStamp'] for item in dataAS if item['longitude']=='0']
+                time2 = [item['timeStamp'] for item in dataAS if item['longitude']=='2']
+                temp0 = [item['temperature (C)'] for item in dataAS if item['longitude']=='0']
+                temp2 = [item['temperature (C)'] for item in dataAS if item['longitude']=='2']
+                sali0 = [item['salinity (PSU)'] for item in dataAS if item['longitude']=='0']
+                sali2 = [item['salinity (PSU)'] for item in dataAS if item['longitude']=='2']
+                lon0 = [item['longitude'] for item in dataAS if item['longitude']=='0']
+                lon2 = [item['longitude'] for item in dataAS if item['longitude']=='2']
+                # put all lists into a dictionary as arrays
+                d = {'timeStamp0': np.array(time0),
+                     'timeStamp2': np.array(time2),
+                     'temperature0': np.array(temp0),
+                     'temperature2': np.array(temp2),
+                     'salinity0': np.array(sali0),
+                     'salinity2': np.array(sali2),
+                     'longitude0': np.array(lon0),
+                     'longitude2': np.array(lon2)
+                     }
+                # make a dataframe
+                dfAS = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in d.items() ]))
+                # if there are invalids in the shallow column (ending in 0), fill with data from deeper column (ending in 2)
+                dfAS['timeStamp0'].fillna(dfAS['timeStamp2'],inplace=True)
+                dfAS['temperature0'].fillna(dfAS['temperature2'],inplace=True)
+                dfAS['salinity0'].fillna(dfAS['salinity2'],inplace=True)
+                dfAS['longitude0'].fillna(dfAS['longitude2'],inplace=True)
+                # drop 'deeper' columns
+                dfAS.drop(columns=[item for item in dfAS.columns if item.endswith('2')],inplace=True)
+                # rename the columns
+                dfAS.rename(columns={item:f'{item[0].upper()}{item[1:-1]}' for item in dfAS.columns},inplace=True)
+                # make a depth column from the longitude
+                dfAS.loc[dfAS['Longitude']=='0','Longitude'] = 0.25
+                dfAS.loc[dfAS['Longitude']=='2','Longitude'] = 1
+                dfAS.rename(columns={'Longitude':'Depth'},inplace=True)
+                print(dfAS.tail())
+                # make a datetime object col for plotting
                 dfAS['DateTime'] = [dt.datetime.strptime(item,'%Y-%m-%dT%H:%M:%S') for item in dfAS['TimeStamp']]
+                # sort by date
+                dfAS.sort_values(by='DateTime',inplace=True)
+                print(dfAS.tail())
             else:
                 print(f'Error in AanderraaCT data retrieval, {dt.datetime.now()} Z: {str(err, "utf-8")}')
                 print(err)
-                dfAS = pd.DataFrame(columns=['TimeStamp','Temperature','Salinity'])
+                dfAS = pd.DataFrame(columns=['TimeStamp','Temperature','Salinity','Depth','DateTime'])
 
         elif "Telemetry 6 Report" in reportName:
             if str(err, 'utf-8') == '':
@@ -623,26 +660,24 @@ def getWaveGlider(args,ID):
                 dfT6 = pd.DataFrame(columns=['GliderTimeStamp','Latitude','Longitude'])
 
         elif "GPS Waves Sensor Data" in reportName:
-            if str(err, 'utf-8') == '':
+            if str(err, 'utf-8') == '' and str(out,'utf-8') != '':
                 dataGPS = list(eval(out))   # a string that is a list of dicts
                 dfGPS = pd.DataFrame([item['timeStamp'],item['latitude'],item['longitude']] for item in dataGPS)
                 dfGPS.columns=['GPSTimeStamp','Latitude','Longitude']
-                print(dfGPS['GPSTimeStamp'].tail(20))
-                # exit(-1)
-
+                # print(dfGPS['GPSTimeStamp'].tail(20))
                 dfGPS['GPSDateTime'] = [dt.datetime.strptime(item,'%Y-%m-%dT%H:%M:%S') for item in dfGPS['GPSTimeStamp']]
                 dfGPS['Latitude'] = dfGPS['Latitude'].astype(float)   # comes as type object, eye roll
                 dfGPS['Longitude'] = dfGPS['Longitude'].astype(float)
             else:
                 print(f'Error in GPS Waves data retrieval, {dt.datetime.now()} Z: {str(err, "utf-8")}')
                 print(err)
-                dfAS = pd.DataFrame(columns=['GPSTimeStamp','Latitude','Longitude'])
+                dfGPS = pd.DataFrame(columns=['GPSTimeStamp','Latitude','Longitude'])
 
                 # print(dfGPS.head())
 
     # convert panda series to something scipy.interpolate can use
     try:
-        secondsSinceAS = (dfAS['DateTime'] - dt.datetime(2022,8,1)).to_numpy() / np.timedelta64(1,'s')  #1e9)  # seconds since
+        secondsSinceAS = (dfAS['DateTime'] - dt.datetime(2022,8,1)).to_numpy() / np.timedelta64(1,'s')  # / 1e9)
     except:
         secondsSinceAS = None
     try:
@@ -651,31 +686,40 @@ def getWaveGlider(args,ID):
         secondsSinceGPS = None
 
     if secondsSinceAS is not None and secondsSinceGPS is not None:
-        fi = interpolate.interp1d(secondsSinceAS, dfAS['Temperature'], fill_value='extrapolate')
-        dfGPS['Temperature'] = fi(secondsSinceGPS)
-        fi = interpolate.interp1d(secondsSinceAS, dfAS['Salinity'], fill_value='extrapolate')
-        dfGPS['Salinity'] = fi(secondsSinceGPS)
+        fi = interpolate.interp1d(secondsSinceGPS, dfGPS['Latitude'], fill_value='extrapolate')
+        dfAS['Latitude'] = fi(secondsSinceAS)
+        fi = interpolate.interp1d(secondsSinceGPS, dfGPS['Longitude'], fill_value='extrapolate')
+        dfAS['Longitude'] = fi(secondsSinceAS)
+        # fi = interpolate.interp1d(secondsSinceAS, dfAS['Temperature'], fill_value='extrapolate')
+        # dfGPS['Temperature'] = fi(secondsSinceGPS)
+        # fi = interpolate.interp1d(secondsSinceAS, dfAS['Salinity'], fill_value='extrapolate')
+        # dfGPS['Salinity'] = fi(secondsSinceGPS)
 
         dfWaveGlider = pd.DataFrame()
         # dfWaveGlider['index']
-        dfWaveGlider['Date'] = dfGPS['GPSTimeStamp']
-        dfWaveGlider['Lat'] = dfGPS['Latitude'].map('{:.03f}'.format).astype(float)
-        dfWaveGlider['Lon'] = dfGPS['Longitude'].map('{:.03f}'.format).astype(float)
-        dfWaveGlider['Temperature'] = dfGPS['Temperature'].map('{:.03f}'.format).astype(float)
-        dfWaveGlider['Salinity'] = dfGPS['Salinity'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['Date'] = dfAS['TimeStamp']
+        dfWaveGlider['Lat'] = dfAS['Latitude'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['Lon'] = dfAS['Longitude'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['Temperature'] = dfAS['Temperature'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['Salinity'] = dfAS['Salinity'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['Depth'] = dfAS['Depth'].map('{:.03f}'.format).astype(float)
+        dfWaveGlider['DateTime'] = dfAS['DateTime']
+        # print(dfWaveGlider['DateTime']-dt.timedelta(days=550))
     else:
-        dfWaveGlider = pd.DataFrame(columns=['Date','Lat','Lon','Temperature','Salinity'])
+        dfWaveGlider = pd.DataFrame(columns=['Date','Lat','Lon','Temperature','Salinity','Depth','DateTime'])
     # print(dfWaveGlider.head())
 
     # fig,ax = plt.subplots(1,1,figsize=(6,3))
-    # ax.plot(dfAS['DateTime'],dfAS['Temperature'],'r.')
-    # ax.plot(dfGPS['GPSDateTime'],dfGPS['Temperature'],'b.')
-    # ax.set_title('ACT temperature (b), interpolated to GPS (r)')
+    # ax.plot(dfAS['DateTime'],dfAS['Longitude'],'r.')
+    # ax.plot(dfGPS['GPSDateTime'],dfGPS['Longitude'],'b.')
+    # ax.set_title('GPS Lon(b), interpolated to AS (r)')
     #
     # fig,ax = plt.subplots(1,1,figsize=(6,3))
-    # ax.plot(dfAS['DateTime'],dfAS['Salinity'],'r.')
-    # ax.plot(dfGPS['GPSDateTime'],dfGPS['Salinity'],'b.')
-    # ax.set_title('ACT salinity (b), interpolated to GPS (r)')
-    print('dfWaveGlider',dfWaveGlider['Date'].tail(20))
+    # ax.plot(dfAS['DateTime'],dfAS['Latitude'],'r.')
+    # ax.plot(dfGPS['GPSDateTime'],dfGPS['Latitude'],'b.')
+    # ax.set_title('GPS Lat (b), interpolated to AS (r)')
+    # plt.show()
+    # print('dfWaveGlider',dfWaveGlider['Date'].tail(20))
+    # exit(-1)
 
     return dfWaveGlider

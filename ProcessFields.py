@@ -491,11 +491,15 @@ def getPGbuoy(args,bid,user,strdate=None):
 
     return df
 
-def getSWIFT(args,ID,starttime,endtime,eng):
-    # eng = matlab.engine.start_matlab()
-    # eng.addpath('../swift_telemetry')
+def getSWIFT(args,ID,eng):
+
     swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
-    print('line 625 in pfields, swiftpath',swiftpath,ID,starttime,endtime)
+
+# FOR REAL
+#    startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
+    endtime = ''    # leaving endtime blank, says get data up to present.
 
     allbatterylevels, lasttime, lastlat, lastlon = eng.pullSWIFTtelemetry(swiftpath,ID,starttime,endtime,nargout=4)
     swiftpath = swiftpath.strip("'")
@@ -504,69 +508,94 @@ def getSWIFT(args,ID,starttime,endtime,eng):
     if endtime=='':
         swiftfile = f'buoy-SWIFT {ID}-start-{starttime}-end-None.mat'
     filecsv = f'{swiftpath}/csv/{os.path.splitext(swiftfile)[0]}.csv'
+    print(filecsv)
     try:
         swift_struct = sio.loadmat(f'{swiftpath}/{swiftfile}')
         SWIFT = swift_struct['SWIFT']
 
-        buoyid = np.array([item for item in chain(*SWIFT[0,:]['ID'])])
-        buoyid = np.array([item.split(' ')[-1] for item in buoyid])
-        # buoydate = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['date'])])])
-        # print('min buoydate',np.min(np.int(buoydate)))
-
-        CTdepth = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['CTdepth'])])])
-        # CTdepth[buoydate==0]
-        unique, counts = np.unique(CTdepth, return_counts=True)
-        baddepth = unique[counts<10]
-        ndepths = len(unique[counts>10])
-
-        # variables come in as list of arrays of nested lists, where each array has one value.
-        lon = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['lon'])])])
-        lat = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['lat'])])])
-
-        salinity = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['salinity'])])])
-        salinity = salinity[CTdepth!=baddepth]
-        salinity = np.reshape(salinity,(-1,ndepths))
-        salinity[salinity<22] = np.nan
-
-        watertemp = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['watertemp'])])])
-        watertemp = watertemp[CTdepth!=baddepth]
-        watertemp = np.reshape(watertemp,(-1,ndepths))
-
-        CTdepth = CTdepth[CTdepth!=baddepth]
-        CTdepth = np.reshape(CTdepth,(-1,ndepths))
-
+        # time, lat, lon are all the same length.   CTdepth,salinity,watertemp can be multiple depths at same time, position
         time = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['time'])])])
-        # # # to check in matlab datevec(SWIFT(end).time)
-        datetime = [dt.datetime.fromordinal(int(t)) + dt.timedelta(t%1) - dt.timedelta(days=366) for t in time]
+        datetime = [dt.datetime.fromordinal(int(t)) + dt.timedelta(t%1) - dt.timedelta(days=366) for t in time]  #
+        lat = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['lat'])])])
+        lon = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['lon'])])])
 
-        columns = ['DateTime','Lat','Lon','BuoyID']
+        # make a dictionary relating times to d/s/t
+        timedepth = {}
+        for ii in range(lat.shape[0]):
+            timedepth[ii] = {'time':SWIFT[0,:]['time'][ii].ravel(),
+                                   'CTdepth':SWIFT[0,:]['CTdepth'][ii].ravel(),
+                                   'Salinity':SWIFT[0,:]['salinity'][ii].ravel(),
+                                   'WaterTemp':SWIFT[0,:]['watertemp'][ii].ravel()
+                                     }
+
+        # find all unique depths
+        CTdepth = np.array([jtem for jtem in chain(*[item.tolist() for item in chain(*SWIFT[0,:]['CTdepth'])])])
+        unique, counts = np.unique(CTdepth, return_counts=True)
+        ndepths = len(unique)
+        print('swift unique depths',ID,unique)
+
+        # get column names for df
+        columns = ['DateTime','Lat','Lon']
         [columns.append(f'CTdepth-{ii}') for ii in range(ndepths)]
         [columns.append(f'Salinity-{ii}') for ii in range(ndepths)]
         [columns.append(f'WaterTemp-{ii}') for ii in range(ndepths)]
-        # print(columns)
-
         # create dataFrame
         dfSwift = pd.DataFrame(columns=columns)
 
-        # fill dataFrame
+        # # # to check in matlab datevec(SWIFT(end).time)
         dfSwift['DateTime'] = datetime
         dfSwift['DateTime'] = dfSwift['DateTime'].dt.round('1s')
-        # dfSwift['DateTimeStr'] = dfSwift['DateTime'].dt.strftime('%d/%m/%Y %H:%M:%S')
+
         dfSwift['Lat'] = lat
         dfSwift['Lon'] = lon
-        dfSwift['BuoyID'] = buoyid
+        # dfSwift['Time'] = np.nan
+        for ii in range(ndepths):
+            dfSwift[f'CTdepth-{ii}'] = np.nan
+            dfSwift[f'Salinity-{ii}'] = np.nan
+            dfSwift[f'WaterTemp-{ii}'] = np.nan
+
+        for k,v in timedepth.items():
+            # dfSwift['Time'][k] = v['time']
+            for ii in range(ndepths):
+                if ii==0:
+                    dfSwift[f'CTdepth-{ii}'][k] = v['CTdepth'][ii]
+                    dfSwift[f'Salinity-{ii}'][k] = v['Salinity'][ii]
+                    dfSwift[f'WaterTemp-{ii}'][k] = v['WaterTemp'][ii]
+                else:
+                    try:
+                        dfSwift[f'CTdepth-{ii}'][k] = v['CTdepth'][ii]
+                    except:
+                        pass
+                    try:
+                        dfSwift[f'Salinity-{ii}'][k] = v['Salinity'][ii]
+                    except:
+                        pass
+                    try:
+                        dfSwift[f'WaterTemp-{ii}'][k] = v['WaterTemp'][ii]
+                    except:
+                        pass
         # reduce to three decimals
         dfSwift['Lat'] = dfSwift['Lat'].map('{:.03f}'.format).astype(float)
         dfSwift['Lon'] = dfSwift['Lon'].map('{:.03f}'.format).astype(float)
         for ii in range(ndepths):
-            dfSwift[f'CTdepth-{ii}'] = CTdepth[:,ii]
-            dfSwift[f'Salinity-{ii}'] = salinity[:,ii]
-            dfSwift[f'WaterTemp-{ii}'] = watertemp[:,ii]
-            # reduce to three decimals
             dfSwift[f'Salinity-{ii}'] = dfSwift[f'Salinity-{ii}'].map('{:.03f}'.format).astype(float)
             dfSwift[f'WaterTemp-{ii}'] = dfSwift[f'WaterTemp-{ii}'].map('{:.03f}'.format).astype(float)
+        print('line 583')
+        print(dfSwift.tail())
+        # if shallowest T/S is invalid, replace with next depth down
+        for ii in range(1,ndepths):
+            dfSwift['CTdepth-0'].fillna(dfSwift[f'CTdepth-{ii}'],inplace=True)
+            dfSwift['Salinity-0'].fillna(dfSwift[f'Salinity-{ii}'],inplace=True)
+            dfSwift['WaterTemp-0'].fillna(dfSwift[f'WaterTemp-{ii}'],inplace=True)
+            dfSwift.drop(columns=[f'CTdepth-{ii}',f'Salinity-{ii}',f'WaterTemp-{ii}'],inplace=True)
+
+        dfSwift.rename(columns={'CTdepth-0':'Depth', 'Salinity-0':'Salinity','WaterTemp-0':'Temperature'},inplace=True)
+        last_col = dfSwift.pop('Depth')
+        dfSwift = pd.concat([dfSwift,last_col],1)
+        print('line 590')
+        print(dfSwift.tail())
     except:
-        dfSwift = pd.DataFrame(columns=['DateTime','Lat','Lon','WaterTemp-0','Salinity-0'])
+        dfSwift = pd.DataFrame(columns=['DateTime','Lat','Lon','WaterTemp','Salinity','Depth'])
 
     return dfSwift
 
@@ -580,9 +609,7 @@ def getWaveGlider(args,ID):
 
     # date time strings
     now = dt.datetime.now()
-    # then = now - dt.timedelta(hours=args.hourstoPlot)
     endDate = now.strftime('%Y-%m-%dT%H:%M:%S')
-    # startDate = then.strftime('%Y-%m-%dT%H:%M:%S')
     # if want data from beginning
     if ID == '102740746' or ID == '84929357':   # pull all the data, only plot the last args.hourstoPlot
         startDate = '2022-08-14T19:00:00'
@@ -594,7 +621,8 @@ def getWaveGlider(args,ID):
         print(reportName)
         print(ID)
 
-        cmd = f'python {args.base_dir}/waveGlider/DataService.py --getReportData --vehicles {ID} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
+        # this cmd has full paths so cron can run it.
+        cmd = f'/Users/suzanne/opt/miniconda3/bin/python {args.base_dir}/pyfiles/DataService.py --getReportData --vehicles {ID} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # waits until p ends and saves output and errors if needed
         out, err = p.communicate()  # both strings
@@ -602,7 +630,6 @@ def getWaveGlider(args,ID):
         if "AanderraaCT Sensor" in reportName:
             if str(err, 'utf-8') == '' and str(out,'utf-8') != '':
                 dataAS = list(eval(out))   # a string that is a list of dicts
-                print(dataAS)
                 # get the data out individually for each depth (longitude=0, depth=0.25, longitude=2, depth=1)
                 time0 = [item['timeStamp'] for item in dataAS if item['longitude']=='0']
                 time2 = [item['timeStamp'] for item in dataAS if item['longitude']=='2']
@@ -638,11 +665,11 @@ def getWaveGlider(args,ID):
                 dfAS.loc[dfAS['Longitude']=='2','Longitude'] = 1
                 dfAS.rename(columns={'Longitude':'Depth'},inplace=True)
                 print(dfAS.tail())
-                # make a datetime object col for plotting
+                # make a datetime object col for plotting and sorting
                 dfAS['DateTime'] = [dt.datetime.strptime(item,'%Y-%m-%dT%H:%M:%S') for item in dfAS['TimeStamp']]
                 # sort by date
                 dfAS.sort_values(by='DateTime',inplace=True)
-                print(dfAS.tail())
+                # print(dfAS.tail())
             else:
                 print(f'Error in AanderraaCT data retrieval, {dt.datetime.now()} Z: {str(err, "utf-8")}')
                 print(err)
@@ -705,6 +732,27 @@ def getWaveGlider(args,ID):
         dfWaveGlider['Depth'] = dfAS['Depth'].map('{:.03f}'.format).astype(float)
         dfWaveGlider['DateTime'] = dfAS['DateTime']
         # print(dfWaveGlider['DateTime']-dt.timedelta(days=550))
+
+        if len(dfGPS.loc[dfGPS['GPSDateTime'] > dfAS['DateTime'].iloc[-1],'GPSDateTime'])>1:
+            # keep location information even if there are no measurements
+            # add missing columns
+            dfGPS['Temperature'] = np.nan
+            dfGPS['Salinity'] = np.nan
+            dfGPS['Depth'] = np.nan
+            dfGPS['Date'] = dfGPS['GPSTimeStamp']
+            dfGPS.drop(columns=['GPSTimeStamp'],inplace=True)
+            # make column order save as dfWaveGlider, for concat
+            first_col = dfGPS.pop('Date')
+            dfGPS.insert(0,'Date',first_col)
+            dfGPS.rename(columns={'Latitude':'Lat','Longitude':'Lon','GPSDateTime':'DateTime'},inplace=True)
+            last_col = dfGPS.pop('DateTime')
+            dfGPS = pd.concat([dfGPS,last_col],1)
+            dfGPS['Lat'] = dfGPS['Lat'].round(decimals=3)
+            dfGPS['Lon'] = dfGPS['Lon'].round(decimals=3)
+            # concatenate
+            dfWaveGlider = pd.concat([dfWaveGlider,dfGPS.loc[dfGPS['DateTime']>dfAS['DateTime'].iloc[-1], :]],0)
+            # print(dfWaveGlider.tail())
+
     else:
         dfWaveGlider = pd.DataFrame(columns=['Date','Lat','Lon','Temperature','Salinity','Depth','DateTime'])
     # print(dfWaveGlider.head())

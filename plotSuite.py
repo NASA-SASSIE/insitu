@@ -58,13 +58,14 @@ def plotSuite(args):
        'DateTimeStr':'Date',
        'DateTime':'Date',
        'Depth':'Depth',
+       'CTDepth-0':'Depth',
        'CTD-S2':'Salinity',
        'S1':'Salinity',
        'Salinity-0':'Salinity',
        'Salinity':'Salinity',
        'Ts':'Temperature',
        'T1':'Temperature',
-       'WaterTemp-0':'Temperature'}
+       'WaterTemp':'Temperature'}
 
     ##################################### DRIFTING BUOY DATA ###################
     if bool(args.buoyIDs):
@@ -221,65 +222,54 @@ def plotSuite(args):
 
         IDs = [item for item in args.swiftIDs.split(',')]  # '09', ,'13','15'  # matlab format with the semi colons
 
-        startswift = today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
-        starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
-        endtime = ''    # leaving endtime blank, says get data up to present.
-        print('SWIFT times',starttime,endtime)
-
         swiftTpts=[]
         swiftTptsZ=[]
         swiftSpts=[]
         swiftSptsZ=[]
         for ID in IDs:
-            dfSwift = pfields.getSWIFT(args, ID, starttime, endtime, eng)
-
+            dfSwift = pfields.getSWIFT(args, ID, eng)
             dfSwift.reset_index(inplace=True)  # used for plotting
-            print(dfSwift.head())
+            print(dfSwift.tail())
             print(dfSwift.columns)
-            columnsWrite = ['DateTime','Lat','Lon','WaterTemp-0','Salinity-0']
+            columnsWrite = ['DateTime','Lat','Lon','Temperature','Salinity','Depth']
 
             if not dfSwift['Lon'].isnull().all():
-                Tcols = [col for col in dfSwift.columns if col.startswith('WaterTemp')]
-                Scols = [col for col in dfSwift.columns if col.startswith('Salinity')]
-                Dcols = [col for col in dfSwift.columns if col.startswith('CTdepth')]
-                for tcol,dcol in zip(Tcols,Dcols):
-                    if not dfSwift[tcol].isnull().all():
-                        swiftTlabel=f"{ID}: {dfSwift[tcol].iloc[-1]:.1f}{degree}C at {dfSwift[dcol].iloc[-1]:.2f}m, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
-                        swiftTpts.append(ax0.scatter(dfSwift['Lon'], dfSwift['Lat'], 2*dfSwift['index'], dfSwift[tcol],
+                if not dfSwift['Temperature'].isnull().all():
+                    swiftTlabel=f"{ID}: {dfSwift['Temperature'].iloc[-1]:.1f}{degree}C, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
+                    swiftTpts.append(ax0.scatter(dfSwift['Lon'], dfSwift['Lat'], 2*dfSwift['index'], dfSwift['Temperature'],
+                               cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
+                    if args.smallDomain is not None:
+                        swiftTptsZ.append(ax10.scatter(dfSwift['Lon'], dfSwift['Lat'], 2*dfSwift['index'], dfSwift['Temperature'],
                                    cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
-                        if args.smallDomain is not None:
-                            swiftTptsZ.append(ax10.scatter(dfSwift['Lon'], dfSwift['Lat'], 2*dfSwift['index'], dfSwift[tcol],
-                                       cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
 
-                    else:
-                        swiftTlabel=f"{ID} No SST data."
+                else:
+                    swiftTlabel=f"{ID} No SST data."
 
-                for scol,dcol in zip(Scols,Dcols):
-                    if not dfSwift[scol].isnull().all():
-                        swiftSlabel=f"{ID}: {dfSwift[scol].iloc[-1]:.2f} at {dfSwift[dcol].iloc[-1]:.2f}m, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
-                        swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'],2*dfSwift['index'],dfSwift[scol],
+                if not dfSwift['Salinity'].isnull().all():
+                    swiftSlabel=f"{ID}: {dfSwift['Salinity'].iloc[-1]:.2f}, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
+                    swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'],2*dfSwift['index'],dfSwift['Salinity'],
+                               cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
+                    if args.smallDomain is not None:
+                        swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'],2*dfSwift['index'],dfSwift['Salinity'],
                                    cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
-                        if args.smallDomain is not None:
-                            swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'],2*dfSwift['index'],dfSwift[scol],
-                                       cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
-                    else:
-                        swiftSlabel=f"{ID} No SSS data."
+                else:
+                    swiftSlabel=f"{ID} No SSS data."
             else:
-                dfSwift['WaterTemp-0'] = np.nan
+                dfSwift['Temperature'] = np.nan
                 swiftTlabel = f"{ID}: no temperature data"
-                swiftTpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['WaterTemp-0'], c=dfSwift['WaterTemp-0'],  # <- dummy vars
+                swiftTpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Temperature'], c=dfSwift['Temperature'],  # <- dummy vars
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=swiftTlabel))
-                swiftTptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['WaterTemp-0'], c=dfSwift['WaterTemp-0'],
+                swiftTptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Temperature'], c=dfSwift['Temperature'],
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=swiftTlabel))
 
-                dfSwift['Salinity-0'] = np.nan
+                dfSwift['Salinity'] = np.nan
                 swiftSlabel = f"{ID}: no salinity data"
-                swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Salinity-0'], c=dfSwift['Salinity-0'],  # <- dummy vars
+                swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Salinity'], c=dfSwift['Salinity'],  # <- dummy vars
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=swiftSlabel))
-                swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Salinity-0'], c=dfSwift['Salinity-0'],
+                swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Salinity'], c=dfSwift['Salinity'],
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=swiftSlabel))
 
@@ -287,21 +277,12 @@ def plotSuite(args):
             # dfSwift.sort_values(by='DateObj',ascending=False,inplace=True)
             # dfSwift = dfSwift.reset_index(drop=True)
             # dfSwift.drop(columns=(['index','DateObj']),axis=1, inplace=True)
-            dfswiftNew = dfSwift[columnsWrite]
-            dfswiftNew.rename(columns=outHeaders,inplace=True)
-            # need to made Date a string for .csv ?
-            # sheetname = f'Swift{ID}'
-            # dfSwiftWrite.to_excel(writer, sheet_name=sheetname)
-
-            # write/append data to csv file
+            print('line 285 polotSuite')
+            print(dfSwift.tail())
+            dfSwift = dfSwift[columnsWrite]
+            print(dfSwift.tail())
             swiftFile = f'{args.base_dir}/csv/Swift{ID}.csv'
-            if os.path.exists(swiftFile):
-                dfswiftPrev = pd.read_csv(swiftFile)
-                dfswiftPrev = pd.concat([dfswiftPrev,dfswiftNew],axis=0,ignore_index=True)
-                dfswiftPrev.drop_duplicates(inplace=True)
-                dfswiftPrev.to_csv(swiftFile,index=False)
-            else:
-                dfswiftNew.to_csv(swiftFile,float_format='%.3f',index=False)
+            dfSwift.to_csv(swiftFile,float_format='%.3f',index=False)
 
         # work the legends on the plots
         legend20 = ax0.legend(handles=swiftTpts,bbox_to_anchor=(1.1, 0.6), loc=2, borderaxespad=0.,fontsize=9,title='Swift Data' )
@@ -338,10 +319,13 @@ def plotSuite(args):
 
     ##################################### WAVE GLIDER DATA #####################
     if bool(args.gliderIDs):
-        IDdict = {'102740746':  "SV3-130",
+        IDdict = {'102740746':  "SV3-130",  # SV3-130 needs double quotes because of -
                   '84929357':   "SV3-153",
                   '1628052144': "SV3-245",
                   '511512553':  "SV3-247"}
+        fileLocs = f'{args.base_dir}/csv/WaveGliderPositions.csv'
+        fh = open(fileLocs,'w+')
+
         waveGliderTpts=[]
         waveGliderTptsZ=[]
         waveGliderSpts=[]
@@ -351,18 +335,24 @@ def plotSuite(args):
         for ID in IDs:
             print(IDdict[ID])
             dfwaveGlider = pfields.getWaveGlider(args,ID)
+            fh.write(f"{IDdict[ID]},{dfwaveGlider['DateTime'].iloc[-1]},{dfwaveGlider['Lat'].iloc[-1]:.3f},{dfwaveGlider['Lon'].iloc[-1]:.3f}\n")
             dfwaveGlider.reset_index(inplace=True)  # used for plotting
-            print(dfwaveGlider.tail(20))
             columnsWrite = ['Date','Lat','Lon','Temperature','Salinity','Depth']
 
             # make a plotting mask
             endPlot = dfwaveGlider['DateTime'].iloc[-1]
             startPlot = endPlot - dt.timedelta(hours = args.hourstoPlot)
             plot = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) #mask
-
+            # print(dfwaveGlider['DateTime'][plot])
+            # print(dfwaveGlider['Lon'][plot])
+            # print(dfwaveGlider['Lat'][plot])
+            # print(dfwaveGlider['Temperature'][plot])
+            # print(dfwaveGlider.loc[np.isnan(dfwaveGlider['Temperature'][plot]),'Lon'])
+            # exit(-1)
             if not dfwaveGlider['Lon'].isnull().all():
                 if not dfwaveGlider.loc[plot,'Temperature'].isnull().all():
                     waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
+                    # waveGliderTpts.append(ax0.plot(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],'k.'))
                     waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
                                cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                     if args.smallDomain is not None:
@@ -410,6 +400,7 @@ def plotSuite(args):
             # else:
             dfwaveGlider.to_csv(gliderFile,float_format='%.3f',index=False)
 
+        fh.close()
         # work the legends on the plots
         legend30 = ax0.legend(handles=waveGliderTpts,bbox_to_anchor=(1.1, 0.3), loc=2, borderaxespad=0.,fontsize=9,title='WaveGlider Data' )
         frame30 = legend30.get_frame()
@@ -470,12 +461,15 @@ def plotSuite(args):
     fig1.savefig(figstr1)
     fig11.savefig(figstr11)
 
-# lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
+#    couldn't get this to work: lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
     # send figures to the ftp site
+    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; mmv -O old *.png; bye"''')
+    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; ls -l; bye"''')
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
 
     # send the data files (csv) to the ftp site
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
+    os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
     # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Swift*.csv; bye"')
     # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Wave*.csv; bye"')
     # os.system(f'/usr/local/bin/lftp -u sassie --password 2Icy2Fresh! -e "mirror --only-newer /Users/suzanne/SASSIE/csv/ /FTP/insitu/data" sftp://ftp.polarscience.org')

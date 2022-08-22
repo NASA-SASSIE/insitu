@@ -218,7 +218,8 @@ def plotSuite(args):
     if bool(args.swiftIDs):
         # get swift data, this requires matlab
         eng = matlab.engine.start_matlab()
-        eng.addpath(f'{args.base_dir}/swift_telemetry')
+        # eng.addpath(f'{args.base_dir}/swift_telemetry')
+        eng.addpath(f'{args.base_dir}/pyfiles')
 
         IDs = [item for item in args.swiftIDs.split(',')]  # '09', ,'13','15'  # matlab format with the semi colons
 
@@ -343,46 +344,50 @@ def plotSuite(args):
             endPlot = dfwaveGlider['DateTime'].iloc[-1]
             startPlot = endPlot - dt.timedelta(hours = args.hourstoPlot)
             plot = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) #mask
-            # print(dfwaveGlider['DateTime'][plot])
-            # print(dfwaveGlider['Lon'][plot])
-            # print(dfwaveGlider['Lat'][plot])
-            # print(dfwaveGlider['Temperature'][plot])
-            # print(dfwaveGlider.loc[np.isnan(dfwaveGlider['Temperature'][plot]),'Lon'])
-            # exit(-1)
             if not dfwaveGlider['Lon'].isnull().all():
+                waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
+                waveGliderSlabel=f"{IDdict[ID]}: {dfwaveGlider['Salinity'].iloc[-1]:.2f} {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
                 if not dfwaveGlider.loc[plot,'Temperature'].isnull().all():
-                    waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
-                    # waveGliderTpts.append(ax0.plot(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],'k.'))
                     waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
                                cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                     if args.smallDomain is not None:
                         waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
                                    cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                 else:
-                    waveGliderTlabel=f"{IDdict[ID]} No SST data."
+                    # waveGliderTlabel=f"{IDdict[ID]}: No temperature data."
+                    waveGliderTpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['Temperature'][plot], c=dfwaveGlider['Temperature'][plot],  # <- dummy vars
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
+                                edgecolor='face', label=waveGliderTlabel))
+                    waveGliderTptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['Temperature'][plot], c=dfwaveGlider['Temperature'][plot],
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
+                                edgecolor='face', label=waveGliderTlabel))
 
-                if not dfwaveGlider['Salinity'].isnull().all():
-                    waveGliderSlabel=f"{IDdict[ID]}: {dfwaveGlider['Salinity'].iloc[-1]:.2f} {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
+                if not dfwaveGlider.loc[plot,'Salinity'].isnull().all():
                     waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot],dfwaveGlider['Salinity'][plot],
                                cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
                     if args.smallDomain is not None:
                         waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot],dfwaveGlider['Salinity'][plot],
                                    cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
                 else:
-                    waveGliderSlabel=f"{IDdict[ID]} No SSS data."
+                    waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['Salinity'][plot], c=dfwaveGlider['Salinity'][plot],  # <- dummy vars
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
+                                edgecolor='face', label=waveGliderSlabel))
+                    waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['Salinity'][plot], c=dfwaveGlider['Salinity'][plot],
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
+                                edgecolor='face', label=waveGliderSlabel))
+                    # waveGliderSlabel=f"{IDdict[ID]}: No salinity data."
             else:
-                # waveGliderSlabel=f"{IDdict[ID]} No SSS data."
-                dfwaveGlider['Temperature'] = np.nan
-                waveGliderTlabel = f"{IDdict[ID]}: no temperature data"
-                waveGliderTpts.append(ax1.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'], dfwaveGlider['Temperature'], c=dfwaveGlider['Temperature'],  # <- dummy vars
+                # dfwaveGlider['Temperature'] = np.nan
+                waveGliderTlabel = f"{IDdict[ID]}: no location data"
+                waveGliderTpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'], dfwaveGlider['Temperature'], c=dfwaveGlider['Temperature'],  # <- dummy vars
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=waveGliderTlabel))
                 waveGliderTptsZ.append(ax11.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'], dfwaveGlider['Temperature'], c=dfwaveGlider['Temperature'],
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=waveGliderTlabel))
 
-                dfwaveGlider['Salinity'] = np.nan
-                waveGliderSlabel = f"{ID}: no salinity data"
+                # dfwaveGlider['Salinity'] = np.nan
+                waveGliderSlabel = f"{IDdict[ID]}: no location data"
                 waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'], dfwaveGlider['Lat'], dfwaveGlider['Salinity'], c=dfwaveGlider['Salinity'],  # <- dummy vars
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=waveGliderSlabel))
@@ -392,12 +397,6 @@ def plotSuite(args):
 
             dfwaveGlider = dfwaveGlider[columnsWrite]
             gliderFile = f'{args.base_dir}/csv/WaveGlider_{IDdict[ID]}.csv'
-            # if os.path.exists(gliderFile):
-            #     dfwaveGliderPrev = pd.read_csv(gliderFile)
-            #     dfwaveGliderPrev = pd.concat([dfwaveGliderPrev,dfwaveGliderNew],axis=0,ignore_index=True)
-            #     dfwaveGliderPrev.drop_duplicates(subset=['Date','Lat','Lon'],keep='first',inplace=True)  # remove rows where interp T/S is different from original
-            #     dfwaveGliderPrev.to_csv(gliderFile,index=False)
-            # else:
             dfwaveGlider.to_csv(gliderFile,float_format='%.3f',index=False)
 
         fh.close()

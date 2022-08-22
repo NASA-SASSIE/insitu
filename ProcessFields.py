@@ -664,7 +664,6 @@ def getWaveGlider(args,ID):
                 dfAS.loc[dfAS['Longitude']=='0','Longitude'] = 0.25
                 dfAS.loc[dfAS['Longitude']=='2','Longitude'] = 1
                 dfAS.rename(columns={'Longitude':'Depth'},inplace=True)
-                print(dfAS.tail())
                 # make a datetime object col for plotting and sorting
                 dfAS['DateTime'] = [dt.datetime.strptime(item,'%Y-%m-%dT%H:%M:%S') for item in dfAS['TimeStamp']]
                 # sort by date

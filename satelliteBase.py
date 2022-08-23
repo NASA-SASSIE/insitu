@@ -143,17 +143,18 @@ def BeaufortSatelliteMap(args,today,surface='SST',zoom=False): #strdate=None,sur
     else:
         ax1.text(-160,69,'ICE data unavailable',color='k',fontsize=10,transform=ccrs.PlateCarree())
 
-    ax1.plot(args.shipLon,args.shipLat,'r*',markersize=10, transform=ccrs.PlateCarree())
+    ax1.plot(args.shipLon,args.shipLat,'k*',markersize=10, transform=ccrs.PlateCarree())
     # if zoom:
     #     ax1.set_aspect('auto')
 
     if surface == 'SST':
         if not zoom:
-            ax1.set_title(f'SASSIE Temperature data {sstdate.month}/{sstdate.day}/{sstdate.year}',fontsize=16)
+            # ax1.set_title(f'SASSIE Temperature data {sstdate.month}/{sstdate.day}/{sstdate.year}',fontsize=16)
+            ax1.set_title(f'SASSIE Temperature data {today.month}/{today.day}/{today.year}',fontsize=16)
             # figstr=f'{args.base_dir}/figs/sassie_Temp_{sstdate.month:02d}-{sstdate.day:02d}-{sstdate.year}.png'
             figstr=f'{args.base_dir}/figs/sassie_Temp_{today.year}{today.month:02}{today.day:02}T{today.hour:02}.png' #:{today.minute:02}:{today.second:02}
         else:
-            ax1.set_title(f'SASSIE Temperature data {sstdate.month}/{sstdate.day}/{sstdate.year} insitu',fontsize=16)
+            ax1.set_title(f'SASSIE Temperature data {today.month}/{today.day}/{today.year} insitu',fontsize=16)
             gl = ax1.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
             gl.xlocator = mticker.FixedLocator(np.arange(-180,180,1))
             gl.xformatter = LONGITUDE_FORMATTER
@@ -164,10 +165,10 @@ def BeaufortSatelliteMap(args,today,surface='SST',zoom=False): #strdate=None,sur
     if surface == 'SSS':
         print('              sssdate',sssdate)
         if not zoom:
-            ax1.set_title(f'SASSIE Salinity data {sssdate.month}/{sssdate.day}/{sssdate.year}',fontsize=16)
+            ax1.set_title(f'SASSIE Salinity data {today.month}/{today.day}/{today.year}',fontsize=16)
             figstr=f'{args.base_dir}/figs/sassie_Sali_{today.year}{today.month:02}{today.day:02}T{today.hour:02}.png'
         else:
-            ax1.set_title(f'SASSIE Salinity data {sssdate.month}/{sssdate.day}/{sssdate.year} insitu',fontsize=16)
+            ax1.set_title(f'SASSIE Salinity data {today.month}/{today.day}/{today.year} insitu',fontsize=16)
             gl = ax1.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False) #, alpha=0.3) crs=ccrs.PlateCarree(),
             gl.xlocator = mticker.FixedLocator(np.arange(-180,180,1))
             gl.xformatter = LONGITUDE_FORMATTER

@@ -436,6 +436,8 @@ def BuoyMaster(bid):
                 'pgname':'UW-TC-1W-0014',
 				'pdepths':[20.,40.,60.],
 				'tdepths':[0.0,2.5,5.,7.5,10.,15.,20.,25.,30.,35.,40.,50.,60.],
+                         # 'HULLsdepths':[0.38],      # hull 0.38
+                         # 'CTDsdepths':[3.5],          # 37IM
 				'T1_ind':9,
 				'P1_ind':6,
 				'bp_ind':22,

@@ -59,12 +59,14 @@ def plotSuite(args):
        'DateTime':'Date',
        'Depth':'Depth',
        'CTDepth-0':'Depth',
+       'CTDepth':'Depth',
        'CTD-S2':'Salinity',
        'S1':'Salinity',
        'Salinity-0':'Salinity',
        'Salinity':'Salinity',
        'Ts':'Temperature',
        'T1':'Temperature',
+       'WaterTemp-0':'Temperature',
        'WaterTemp':'Temperature'}
 
     ##################################### DRIFTING BUOY DATA ###################
@@ -78,110 +80,94 @@ def plotSuite(args):
         for ii,bid in enumerate(bids):
             print(f'Buoy ID: {bid}')
             # make pandas dataframe
-            df = pfields.getPGbuoy(args,bid,'pscapluw')
+            dfBuoy = pfields.getPGbuoy(args,bid,'pscapluw')
+            dfBuoy.reset_index(inplace=True)  # used for plotting
+            # # for testing
+            # dfBuoy['Lon'] = np.linspace(-167,-139,len(dfBuoy))
+            # dfBuoy['Lat'] = np.linspace(70,80,len(dfBuoy))
             binf = BM.BuoyMaster(bid)
-            columnsWrite = ['Date','Lat','Lon']
+            columnsWrite = ['Date','Lat','Lon','Temperature','Salinity','DepthT','DepthS']
 
-            if len(df)>0:  # if there are data
-                # temperature data on plots
-                try:
-                    (tcol,) = [col for col in df.columns if col.startswith('T') or col.startswith('CTD-T')]
-                    buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {df[tcol].iloc[-1]:.1f}{degree}C, {df['Lon'].iloc[-1]:.2f}W, {df['Lat'].iloc[-1]:.2f}N"
-                    buoyTpts.append(ax0.scatter(df['Lon'],df['Lat'], 2*df['index'], c=df[tcol],
-                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoyTlabel))
-                    if args.smallDomain is not None:
-                        buoyTptsZ.append(ax10.scatter(df['Lon'],df['Lat'], 2*df['index'], c=df[tcol],
-                                    cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),  #cmap=sstcmap, norm=sstnorm,
-                                    edgecolor='face', label=buoyTlabel))
-                    columnsWrite.append(tcol)
-                except:
-                    df['Ts'] = np.nan
-                    buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no temperature data"
-                    buoyTpts.append(ax1.scatter(df['Lon'], df['Lat'], df['Ts'], c=df['Ts'],  # <- dummy vars
-                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoyTlabel))
-                    buoyTptsZ.append(ax11.scatter(df['Lon'], df['Lat'], df['Ts'], c=df['Ts'],
-                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoyTlabel))
-                    columnsWrite.append('Ts')
+            # make a plotting mask for last 'hourstoPlot'
+            if not dfBuoy['DateTime'].isnull().all():
+                endPlot = dfBuoy['DateTime'].iloc[-1]
+                startPlot = endPlot - dt.timedelta(hours = args.hourstoPlot)
+                plot = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) #mask
+                # maka a plotting invalids mask in last 'hourstoPlot'
+                nanplotT = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Temperature'])) #mask
+                nanplotS = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Salinity'])) #mask
 
-                # salinity data on plots
-                try:
-                    (scol,) = [col for col in df.columns if col.startswith('S') or col.startswith('CTD-S')]
-                    buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {df[scol].iloc[-1]:.1f} psu, {df['Lon'].iloc[-1]:.2f}W, {df['Lat'].iloc[-1]:.2f}N"
-                    buoySpts.append(ax1.scatter(df['Lon'], df['Lat'], 2*df['index'], c=df[scol],
-                                cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoySlabel))
+            if not dfBuoy['Lon'].isnull().all():
+                buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Temperature'].iloc[-1]:.1f}{degree}C, {dfBuoy['Lon'].iloc[-1]:.2f}W, {dfBuoy['Lat'].iloc[-1]:.2f}N"
+                buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Salinity'].iloc[-1]:.1f}, {dfBuoy['Lon'].iloc[-1]:.2f}W, {dfBuoy['Lat'].iloc[-1]:.2f}N"
+
+                if not dfBuoy['Temperature'].isnull().all():
+                    buoyTpts.append(ax0.scatter(dfBuoy['Lon'],dfBuoy['Lat'], dfBuoy['index'].div(10), c=dfBuoy['Temperature'],
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),edgecolor='face', label=buoyTlabel))
+                    if nanplotT.sum()>0:
+                        buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
+                        buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+
                     if args.smallDomain is not None:
-                        buoySptsZ.append(ax11.scatter(df['Lon'], df['Lat'], 2*df['index'], c=df[scol],
-                                    cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                                    edgecolor='face', label=buoySlabel))
-                    columnsWrite.append(scol)
-                except:
-                    df['S1'] = np.nan
-                    buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no salinity data"
-                    buoySpts.append(ax1.scatter(df['Lon'], df['Lat'], df['S1'], c=df['S1'],  # <- dummy vars
-                                cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoySlabel))
-                    buoySptsZ.append(ax11.scatter(df['Lon'], df['Lat'], df['S1'], c=df['S1'],
-                                cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                                edgecolor='face', label=buoySlabel))
-                    columnsWrite.append('S1')
+                        buoyTptsZ.append(ax10.scatter(dfBuoy['Lon'],dfBuoy['Lat'], dfBuoy['index'].div(30), c=dfBuoy['Temperature'],
+                                    cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(), edgecolor='face', label=buoyTlabel))
+                        if nanplotT.sum()>0:
+                            buoyTpts.append(ax10.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
+                            buoyTpts.append(ax10.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                else:
+                    buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel))
+                    ax0.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel)
+                    buoyTptsZ.append(ax10.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=buoyTlabel))
+                    ax10.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel)
+
+                if not dfBuoy['Salinity'].isnull().all():
+                    buoySpts.append(ax1.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['index'].div(10), c=dfBuoy['Salinity'],
+                                cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
+                    if nanplotS.sum()>0:
+                        buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
+                        buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+
+                    if args.smallDomain is not None:
+                        buoySptsZ.append(ax11.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['index'].div(30), c=dfBuoy['Salinity'],
+                                    cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
+                        if nanplotS.sum()>0:
+                            buoySpts.append(ax11.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
+                            buoySpts.append(ax11.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                else:
+                    buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=buoySlabel))
+                    ax1.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=buoySlabel)
+                    buoySptsZ.append(ax11.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=buoySlabel))
+                    ax11.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=buoySlabel)
 
             else:   # if datafiles from website are empty.
 
-                df['Ts'] = np.nan
-                buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no temperature data"
-                buoyTpts.append(ax1.scatter(df['Lon'], df['Lat'], df['Ts'], c=df['Ts'],  # <- dummy vars
-                            cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
-                            edgecolor='face', label=buoyTlabel))
-                buoyTptsZ.append(ax11.scatter(df['Lon'], df['Lat'], df['Ts'], c=df['Ts'],
-                            cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
-                            edgecolor='face', label=buoyTlabel))
-                columnsWrite.append('Ts')
+                dfBuoy['Temperature'] = np.nan
+                dfBuoy['Lon'] = np.nan
+                dfBuoy['Lat'] = np.nan
+                buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no location data"
+                buoyTpts.append(ax1.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['Temperature'], c=dfBuoy['Temperature'],  # <- dummy vars
+                            cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(), edgecolor='face', label=buoyTlabel))
+                buoyTptsZ.append(ax11.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['Temperature'], c=dfBuoy['Temperature'],
+                            cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(), edgecolor='face', label=buoyTlabel))
 
-                df['S1'] = np.nan
-                buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no salinity data"
-                buoySpts.append(ax1.scatter(df['Lon'], df['Lat'], df['S1'], c=df['S1'],  # <- dummy vars
-                            cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                            edgecolor='face', label=buoySlabel))
-                buoySptsZ.append(ax11.scatter(df['Lon'], df['Lat'], df['S1'], c=df['S1'],
-                            cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(),
-                            edgecolor='face', label=buoySlabel))
-                columnsWrite.append('S1')
+                dfBuoy['Salinity'] = np.nan
+                buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: no location data"
+                buoySpts.append(ax1.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['Salinity'], c=dfBuoy['Salinity'],  # <- dummy vars
+                            cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
+                buoySptsZ.append(ax11.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['Salinity'], c=dfBuoy['Salinity'],
+                            cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
 
-            print('line 134 in plotSuite',bid,columnsWrite)
-
-            # # reorder to descending dates for writing to ouput
-            # if len(df)>0:
-            #     df.sort_values(by='Date',ascending=False,inplace=True)
-            #     df = df.reset_index(drop=True)
-            #     print(df.head())
-
-            dfNew = df[columnsWrite]
-            dfNew.rename(columns=outHeaders,inplace=True)
             # sheetname = f'UTO_{binf["name"][0]}-{int(binf["name"][1]):02d}'
             # print('sheetname',sheetname)
             # dfWrite.to_excel(writer, sheet_name=sheetname)
 
             # writes/append  data to csv file
+            dfBuoy = dfBuoy[columnsWrite]
             utoFile = f'{args.base_dir}/csv/UTO_{binf["name"][0]}-{int(binf["name"][1]):02d}.csv'
-            print('utoFile',utoFile)
-            if os.path.exists(utoFile):
-                dfPrev = pd.read_csv(utoFile)
-                if dfPrev.empty is True:
-                    print('line 150 dfPrev is empty I guess',dfPrev.head())
-                    dfNew.to_csv(utoFile,index=False)
-                else:
-                    dfPrev = pd.concat([dfPrev,dfNew],axis=0,ignore_index=True)
-                    dfPrev.drop_duplicates(inplace=True)
-                    dfPrev.to_csv(utoFile,index=False)
-            else:
-                dfNew.to_csv(utoFile,float_format='%.3f',index=False)
+            dfBuoy.to_csv(utoFile,float_format='%.3f',index=False)
 
         # legends for temperatures
-        legend10 = ax0.legend(handles=buoyTpts,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data')
+        legend10 = ax0.legend(handles=buoyTpts,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data',markerscale=1)
         frame10 = legend10.get_frame()
         frame10.set_facecolor('lightgray')
         frame10.set_edgecolor('black')
@@ -189,7 +175,7 @@ def plotSuite(args):
         for ii in range(len(bids)):
             leg.legendHandles[ii].set_color('k')
 
-        legend110 = ax10.legend(handles=buoyTptsZ,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data')
+        legend110 = ax10.legend(handles=buoyTptsZ,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data',markerscale=1)
         frame10 = legend110.get_frame()
         frame10.set_facecolor('lightgray')
         frame10.set_edgecolor('black')
@@ -198,7 +184,7 @@ def plotSuite(args):
             leg.legendHandles[ii].set_color('k')
 
         # legends for salinities
-        legend11 = ax1.legend(handles=buoySpts,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data')
+        legend11 = ax1.legend(handles=buoySpts,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data',markerscale=1)
         frame11 = legend11.get_frame()
         frame11.set_facecolor('lightgray')
         frame11.set_edgecolor('black')
@@ -206,7 +192,7 @@ def plotSuite(args):
         for ii in range(len(bids)):
             leg.legendHandles[ii].set_color('k')
 
-        legend111 = ax11.legend(handles=buoySptsZ,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data')
+        legend111 = ax11.legend(handles=buoySptsZ,bbox_to_anchor=(1.1,1),loc=2,borderaxespad=0.,fontsize=9,title='HydroBuoy Data',markerscale=1)
         frame11 = legend111.get_frame()
         frame11.set_facecolor('lightgray')
         frame11.set_edgecolor('black')
@@ -240,8 +226,8 @@ def plotSuite(args):
                 startPlot = endPlot - dt.timedelta(hours = args.hourstoPlot)
                 plot = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) #mask
                 # maka a plotting invalids mask in last 'hourstoPlot'
-                nanplotT = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) & (np.isnan(dfwaveGlider['Temperature'])) #mask
-                nanplotS = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) & (np.isnan(dfwaveGlider['Salinity'])) #mask
+                nanplotT = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Temperature'])) #mask
+                nanplotS = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Salinity'])) #mask
 
             if not dfSwift['Lon'].isnull().all():
                 swiftTlabel=f"{ID}: {dfSwift['Temperature'].iloc[-1]:.1f}{degree}C, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
@@ -254,17 +240,19 @@ def plotSuite(args):
                         swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
 
                     if args.smallDomain is not None:
-                        swiftTptsZ.append(ax10.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['index'].div(10), dfSwift['Temperature'],
+                        swiftTptsZ.append(ax10.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['index'].div(30), dfSwift['Temperature'],
                                    cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
+                        # swiftTptsZ.append(ax10.scatter(dfSwift['Lon'].iloc[-1], dfSwift['Lat'].iloc[-1], dfSwift['index'].iloc[-1].div(10), dfSwift['Temperature'].iloc[-1],
+                        #            cmap=cmap, norm=normsst, marker='s', edgecolor='k',transform=ccrs.PlateCarree(), label=swiftTlabel))
                         if nanplotT.sum()>0:
                             swiftTpts.append(ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
                             swiftTpts.append(ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
 
                 else:
-                    swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel))
-                    ax0.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel)
-                    swiftTptsZ.append(ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=waveGliderTlabel))
-                    ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel)
+                    swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(),label=swiftTlabel))
+                    ax0.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=swiftTlabel)
+                    swiftTptsZ.append(ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=swiftTlabel))
+                    ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=swiftTlabel)
 
                 if not dfSwift['Salinity'].isnull().all():
                     swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'],dfSwift['index'].div(10),dfSwift['Salinity'],
@@ -274,18 +262,20 @@ def plotSuite(args):
                         swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
 
                     if args.smallDomain is not None:
-                        swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'],dfSwift['index'].div(10),dfSwift['Salinity'],
+                        swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'],dfSwift['index'].div(30),dfSwift['Salinity'],
                                    cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
                         if nanplotS.sum()>0:
                             swiftSpts.append(ax11.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
                             swiftSpts.append(ax11.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
                 else:
-                    swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel))
-                    ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel)
-                    swiftSptsZ.append(ax11.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel))
-                    ax11.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel)
+                    swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel))
+                    ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel)
+                    swiftSptsZ.append(ax11.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel))
+                    ax11.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel)
             else:
                 dfSwift['Temperature'] = np.nan
+                dfSwift['Lon'] = np.nan
+                dfSwift['Lat'] = np.nan
                 swiftTlabel = f"{ID}: no location data"
                 swiftTpts.append(ax0.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['Temperature'], c=dfSwift['Temperature'],  # <- dummy vars
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
@@ -358,6 +348,7 @@ def plotSuite(args):
         for ID in IDs:
             print(IDdict[ID])
             dfwaveGlider = pfields.getWaveGlider(args,ID)
+            print(dfwaveGlider.tail())
             fh.write(f"{IDdict[ID]},{dfwaveGlider['DateTime'].iloc[-1]},{dfwaveGlider['Lat'].iloc[-1]:.3f},{dfwaveGlider['Lon'].iloc[-1]:.3f}\n")
             dfwaveGlider.reset_index(inplace=True)  # used for plotting
             columnsWrite = ['Date','Lat','Lon','Temperature','Salinity','Depth']
@@ -492,15 +483,13 @@ def plotSuite(args):
 
 #    couldn't get this to work: lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
     # send figures to the ftp site
-    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; mmv -O old *.png; bye"''')
+    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; mmv -O /FTP/insitu/images/old/ *.png; bye"''')
     # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; ls -l; bye"''')
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
-
-    # send the data files (csv) to the ftp site
+    #
+    # # send the data files (csv) to the ftp site
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
     os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
-    # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Swift*.csv; bye"')
-    # os.system(f'/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput Wave*.csv; bye"')
     # os.system(f'/usr/local/bin/lftp -u sassie --password 2Icy2Fresh! -e "mirror --only-newer /Users/suzanne/SASSIE/csv/ /FTP/insitu/data" sftp://ftp.polarscience.org')
         # plt.show(block=False)
         # plt.pause(0.001)

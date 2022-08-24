@@ -376,15 +376,12 @@ def getPGbuoy(args,bid,user,strdate=None):
     binf = BM.BuoyMaster(bid)
     psswd=userCred(user)
 
-    today=dt.datetime.now()
-    # enddate="%.2d/%.2d/%d" % (today.month,today.day,today.year)
-    downloaddate = f'{today.year}{today.month:02}{today.day:02}'
-    # downloaddate =f'{strdate[:4]}{strdate[4:6]}{strdate[6:]}'
-    enddate = "%.2d/%.2d/%d" % (today.month,today.day,today.year)
-    # objdate = dt.datetime.strptime(strdate,'%Y%m%d')
-    twoDayPrev = today - dt.timedelta(hours=args.hourstoPlot) #dt.timedelta(days=800)
-    print(twoDayPrev)
-    startdate = "%.2d/%.2d/%d" % (twoDayPrev.month,twoDayPrev.day,twoDayPrev.year)
+
+    now=dt.datetime.now()
+    downloaddate = f'{now.year}{now.month:02}{now.day:02}'
+    enddate = now.strftime('%m/%d/%Y') #     %.2d/%.2d/%d" % (today.month,today.day,today.year)
+    then = dt.datetime(2022,8,20)
+    startdate = then.strftime('%m/%d/%Y') # "%.2d/%.2d/%d" % (twoDayPrev.month,twoDayPrev.day,twoDayPrev.year)
     print('start',startdate)
     print('end',enddate)
 
@@ -401,10 +398,14 @@ def getPGbuoy(args,bid,user,strdate=None):
     df = pd.read_csv(f'{args.base_dir}/BuoyData/UTO_{bid}_{downloaddate}.csv',parse_dates=['DeviceDateTime'])
 
     if len(df)==0:  # downloaded an empty dataframe, no data for the bids
-        df = pd.DataFrame(columns=['Date','Lat','Lon','Temperature','Salinity'])
+        df = pd.DataFrame(columns=['Date','Lat','Lon','Temperature','Salinity','DepthT','DepthS','DateTime'])
     else:
-        # pick out the pertinent columns
-        sas = ['date','lat','lon','sst','temp','sal','press','depth']
+        # for testing
+        # df['CTSalinityHull'] = 25.2
+        # df['37IMSalinity1'] = 26.6
+        # df['CTSalinityHull'].iloc[:3] = np.nan
+
+        sas = ['date','lat','lon','sst','temp','sal']
         sascol=[s for s in df.columns.values for x in sas if x in s.lower()]
         df = df[sascol]
 
@@ -412,9 +413,13 @@ def getPGbuoy(args,bid,user,strdate=None):
         sascolumns = HC.PG_HeaderCodes(sascol)
         df.rename(columns=(dict(zip(sascol,sascolumns.keys()))),inplace=True)
         # add date object column for sorting, we don't need this because we parsed dates above ?
-        # df['Date'] = pd.to_datetime(df['Date'],format='%m/%d/%y %H:%M')
-        df.sort_values(by='Date', inplace=True)
-        df.reset_index(inplace=True)
+        df['DateTime'] = pd.to_datetime(df['Date'],format='%m/%d/%y %H:%M')
+        df.sort_values(by='DateTime',inplace=True,ignore_index=True)
+        # move T10, 11, 12 cols to after T9
+        for col in ['T10','T11','T12']:
+            if col in df.columns:
+                col_series = df.pop(col)
+                df = pd.concat([df,col_series],1)
 
         # find the shallowest temperature measurement
         try:
@@ -435,17 +440,33 @@ def getPGbuoy(args,bid,user,strdate=None):
             tlist.extend(list(zip(HULLtdepths,tcols)))
         except:
             tlist.extend([])
-        tlist.sort(key=lambda y: y[0])
-        print('tlist line 439',tlist)
-        # make sure there are valid data in the col
-        for ii,item in enumerate(tlist):
-            print(item[1])
-            if not df[item[1]].isnull().all():
-                tcol = item[1]
-                print('line 445 tcol',tcol)
-                break
-        # exit(-1)
-        # find the shallowest salinity measurement,     WITH DATA IN IT
+
+        if len(tlist)>0:
+            tlist.sort(key=lambda y: y[0])
+            tcols = [item[1] for item in tlist]
+            # drop cols with measurements at >= 5m depths
+            tcolsdrop=[]
+            for ii,item in enumerate(tlist):
+                if item[0] >= 5:
+                    tcolsdrop.append(item[1])
+            df.drop(columns=tcolsdrop,inplace=True)
+            tcols = [col for col in tcols if col not in tcolsdrop]
+            # # for testing
+            # df['Ts'].iloc[-2:] = np.nan
+            # df['T1'].iloc[-4:] =-0.5
+            # print('line 458',df.tail())
+
+            # keep the shallowest valid measurement
+            df['DepthT'] = tlist[0][0]
+            for ii in range(1,len(tcols)):
+                df.loc[np.isnan(df[tcols[0]]),'DepthT'] = tlist[ii][0]
+                df[tcols[0]].fillna(df[tcols[ii]],inplace=True)
+                df.drop(columns=tcols[ii],inplace=True)
+        else:
+            df['Temperature'] = np.nan
+            df['DepthT'] = np.nan
+
+        # # find the shallowest salinity measurement,     WITH DATA IN IT
         try:
             sdepths = binf['sdepths']
             scols = [col for col in df.columns if col.startswith('S') and col != 'Shull']
@@ -460,35 +481,42 @@ def getPGbuoy(args,bid,user,strdate=None):
             slist.extend([])
         try:
             HULLsdepths = binf['HULLsdepths']
-            scols = [col for col in df.columns if col.startswith('Shull')]
-            slist.extend(list(zip(HULLsdepths,scols)))
+            scol = [col for col in df.columns if col.startswith('Shull')]
+            slist.extend(list(zip(HULLsdepths,scol)))
         except:
             slist.extend([])
-        slist.sort(key=lambda y: y[0])
-        print('slist line 469',slist)
 
-        # keep only the shallowest, where the salinity measurement must be shallower than 5m
-        if not slist:
-            df = df[['index','Date','Lat','Lon',tcol]]
-        else:
+        if len(slist)>0:
+            slist.sort(key=lambda y: y[0])
+            scols = [item[1] for item in slist]
+            # drop cols with measurements at >= 5m depths
+            scolsdrop=[]
             for ii,item in enumerate(slist):
-                print(item,item[0],item[1])
-                if not df[item[1]].isnull().all():
-                    scol = item[1]
-                    print('scol',scol)
-                    break
-            if  slist[ii][0] < 5:
-                df = df[['index','Date','Lat','Lon',tcol,scol]]
-            else:
-                df = df[['index','Date','Lat','Lon',tcol]]
-        # formatting
+                if item[0] >= 5:
+                    scolsdrop.append(item[1])
+            df.drop(columns=scolsdrop,inplace=True)
+            scols = [col for col in scols if col not in scolsdrop]
+            # keep shallowest valid measurement
+            df['DepthS'] = slist[0][0]
+            for ii in range(1,len(scols)):
+                df.loc[np.isnan(df[scols[0]]),'DepthS'] = slist[ii][0]
+                df[scols[0]].fillna(df[scols[ii]],inplace=True)
+                df.drop(columns=scols[ii],inplace=True)
+        else:
+            df['Salinity'] = np.nan
+            df['DepthS'] = np.nan
+
+        # formatting final data frame
         df['Date'] = df['Date'].dt.round('1s')
         df['Lat'] = df['Lat'].map('{:.03f}'.format).astype(float)
         df['Lon'] = df['Lon'].map('{:.03f}'.format).astype(float)
-        df[tcol] = df[tcol].map('{:.03f}'.format).astype(float)
-        if slist:
-            df[scol] = df[scol].map('{:.03f}'.format).astype(float)
-
+        if len(tcols)>0:
+            df[tcols[0]] = df[tcols[0]].map('{:.03f}'.format).astype(float)
+            df.rename(columns = {tcols[0]:'Temperature'},inplace=True)
+        if len(scols)>0:
+            df[scols[0]] = df[scols[0]].map('{:.03f}'.format).astype(float)
+            df.rename(columns = {scols[0]:'Salinity'},inplace=True)
+        df = df[['Date','Lat','Lon','Temperature','Salinity','DepthT','DepthS','DateTime']]
     return df
 
 def getSWIFT(args,ID,eng):
@@ -583,6 +611,7 @@ def getSWIFT(args,ID,eng):
             dfSwift[f'WaterTemp-{ii}'] = dfSwift[f'WaterTemp-{ii}'].map('{:.03f}'.format).astype(float)
         print('line 583')
         print(dfSwift.tail())
+        exit(-1)
         # if shallowest T/S is invalid, replace with next depth down
         for ii in range(1,ndepths):
             dfSwift['CTdepth-0'].fillna(dfSwift[f'CTdepth-{ii}'],inplace=True)

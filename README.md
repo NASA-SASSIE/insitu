@@ -10,7 +10,7 @@ BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/
 	
 WaveGlider server relies on the time zone of the local computer. Change the time zone
-on your computer to UTC (British Summer) for the duration of the SASSIE experiment.
+on your computer to UTC (Ponta Delgada - Portugal) for the duration of the SASSIE experiment.
 
 A cron job runs jobs at specified times. The cron command has five arguments at the beginning:
 1. which minutes to run on    * means all

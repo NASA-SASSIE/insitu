@@ -10,7 +10,7 @@ Edit the input_args_SASSIE.txt file, changing <br/>
 	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window) <br/>
 	
 You’ll need subdirectories under the base_dir: <br/>
-BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/
+BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/<br/>
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/
 	
 To run the code, cd to your base_dir, type<br/>
@@ -48,6 +48,7 @@ In your terminal window:
 5. type :wq		(saves the file)
 6. press enter		(closes the vi window)
 
+The cron job will start running on the schedule you gave it.
 To stop a cron job, remove it with crontab -r
 To view a cron job, list it with crontab -l
 

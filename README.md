@@ -4,7 +4,7 @@ Main code is plotSuite.py, which collects, plots and writes data to .csv files.
 
 Clone this repository. 
 
-Edit the input_args_SASSIE.txt file, changing. 
+Edit the input_args_SASSIE.txt file, changing <br/>
 	--base_dir to your directory. 
 	--local_lftp to your path to lftp (can be found by typing 'which lftp' in a terminal window). 
 	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window). 

@@ -4,13 +4,16 @@ Main code is plotSuite.py, which collects, plots and writes data to .csv files.
 
 Clone this repository. 
 
-Edit the input_args_SASSIE.txt file, changing the --base_dir to your directory. 
+Edit the input_args_SASSIE.txt file, changing
+	--base_dir to your directory
+	--local_lftp to your path to lftp (can be found by typing 'which lftp' in a terminal window)
+	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window)
 You’ll need subdirectories under the base_dir: 
 BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/
 	
 WaveGlider server relies on the time zone of the local computer. Change the time zone
-on your computer to UTC (British Summer) for the duration of the SASSIE experiment.
+on your computer to UTC (Ponta Delgada - Portugal) for the duration of the SASSIE experiment.
 
 A cron job runs jobs at specified times. The cron command has five arguments at the beginning:
 1. which minutes to run on    * means all

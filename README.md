@@ -22,7 +22,7 @@ on your computer to UTC (Ponta Delgada - Portugal) for the duration of the SASSI
 A cron job runs jobs at specified times. The cron command has five arguments at the beginning:
 1. which minutes to run on    * means all
 2. which hours
-3  which days
+3. which days
 4. which months
 5. which days of week
 

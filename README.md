@@ -4,11 +4,11 @@ Main code is plotSuite.py, which collects, plots and writes data to .csv files.
 
 Clone this repository. 
 
-Edit the input_args_SASSIE.txt file, changing
-	--base_dir to your directory
-	--local_lftp to your path to lftp (can be found by typing 'which lftp' in a terminal window)
-	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window)
-You’ll need subdirectories under the base_dir: 
+Edit the input_args_SASSIE.txt file, changing. 
+	--base_dir to your directory. 
+	--local_lftp to your path to lftp (can be found by typing 'which lftp' in a terminal window). 
+	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window). 
+You’ll need subdirectories under the base_dir:   
 BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/
 	

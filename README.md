@@ -8,6 +8,7 @@ Edit the input_args_SASSIE.txt file, changing <br/>
 	--base_dir to your directory <br/> 
 	--local_lftp to your path to lftp (can be found by typing 'which lftp' in a terminal window) <br/> 
 	--pythonPath to your path to python (can be found by typing 'which python' in a terminal window) <br/>
+	
 You’ll need subdirectories under the base_dir: <br/>
 BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/

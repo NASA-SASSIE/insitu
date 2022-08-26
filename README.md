@@ -13,6 +13,9 @@ You’ll need subdirectories under the base_dir: <br/>
 BuoyData/, SatelliteFields/, csv/, figs/, pyfiles/, swift_telemetry/, waveGlider/
 	under SatelliteFields/ you’ll need Bremen_SIC/, NOAA_SST/, JPL_SMAP/
 	
+To run the code, cd to your base_dir, type<br/>
+python pyfiles/plotSuite.py @pyfiles/input_args_SASSIE.txt
+	
 WaveGlider server relies on the time zone of the local computer. Change the time zone
 on your computer to UTC (Ponta Delgada - Portugal) for the duration of the SASSIE experiment.
 

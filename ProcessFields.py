@@ -24,6 +24,7 @@ from itertools import chain
 import subprocess
 import json
 from scipy import interpolate
+import zipfile
 
 #======= Get ICE concentration map from Bremen ==============
 def getICE(args,nors='n'):
@@ -519,6 +520,68 @@ def getPGbuoy(args,bid,user,strdate=None):
         df = df[['Date','Lat','Lon','Temperature','Salinity','DepthT','DepthS','DateTime']]
     return df
 
+def getSWIFTdirectly(args,ID,eng):
+
+    swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
+
+# FOR REAL
+    startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    # use this starttime if needing to test code with data.
+    startswift = dt.datetime(2021,8,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
+    endtime = ''    # leaving endtime blank, says get data up to present.
+
+    # strcommand='http://swiftserver.apl.washington.edu/kml?action=kml&'
+    # strcommand+=f'buoy_name=SWIFT+{ID}&start={starttime}&end={endtime}&format=json'
+    # sw=urllib.request.urlopen(strcommand)  # downloads file with minimal header if bid file not unavailable
+    # data=sw.read()
+    # encoding = sw.info().get_content_charset('utf-8')
+    # data = json.loads(data.decode(encoding))
+    # print(data.keys())
+    # print()
+    # # print(data['buoys'])
+    # print()
+    # print(data['buoys'][0]['data'][0])
+
+    strcommand='http://swiftserver.apl.washington.edu/services/buoy?action=get_data&buoy_name='
+    strcommand+=f'SWIFT{ID}&start={starttime}&end={endtime}&format=zip'
+    # strcommand+=f'microSWIFT{ID}&start={starttime}&end={endtime}&format=zip'
+    # request = requests.get(url)
+    # file = zipfile.ZipFile(BytesIO(request.content))
+
+    # r = urllib.request.urlopen(strcommand)
+    # with zipfile.ZipFile(BytesIO(r.read())) as z:
+    #     print(z.namelist())
+    # sw=urllib.request.urlopen(strcommand)  # downloads file with minimal header if bid file not unavailable
+    #
+    # print(sw)
+    # with open('test.zip','wb') as ofile:
+    #     ofile.write(sw.read())
+    # # data=sw.read()
+    # encoding = sw.info().get_content_charset('utf-8')
+    # data = json.loads(data.decode(encoding))
+    # print(data)
+    # exit(-1)
+
+
+
+
+    # fid.close()
+    # data=str(data,'utf-8')
+    # opw=open(f'{args.base_dir}/BuoyData/UTO_{bid}_{downloaddate}.csv','w')
+    # opw.write(data)
+    # opw.close()
+    # df = pd.read_csv(f'{args.base_dir}/BuoyData/UTO_{bid}_{downloaddate}.csv',parse_dates=['DeviceDateTime'])
+
+    # allbatterylevels, lasttime, lastlat, lastlon = eng.pullSWIFTtelemetry(swiftpath,ID,starttime,endtime,nargout=4)
+    # swiftpath = swiftpath.strip("'")
+    # print('swiftpath',swiftpath,allbatterylevels, lasttime, lastlat, lastlon)
+    #
+    # if endtime=='':
+    #     swiftfile = f'buoy-SWIFT {ID}-start-{starttime}-end-None.mat'
+    # filecsv = f'{swiftpath}/csv/{os.path.splitext(swiftfile)[0]}.csv'
+    # print(filecsv)
+
 def getSWIFT(args,ID,eng):
 
     swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
@@ -609,9 +672,7 @@ def getSWIFT(args,ID,eng):
         for ii in range(ndepths):
             dfSwift[f'Salinity-{ii}'] = dfSwift[f'Salinity-{ii}'].map('{:.03f}'.format).astype(float)
             dfSwift[f'WaterTemp-{ii}'] = dfSwift[f'WaterTemp-{ii}'].map('{:.03f}'.format).astype(float)
-        print('line 583')
-        print(dfSwift.tail())
-        exit(-1)
+        # exit(-1)
         # if shallowest T/S is invalid, replace with next depth down
         for ii in range(1,ndepths):
             dfSwift['CTdepth-0'].fillna(dfSwift[f'CTdepth-{ii}'],inplace=True)
@@ -656,7 +717,7 @@ def getWaveGlider(args,ID):
         print(ID)
 
         # this cmd has full paths so cron can run it.
-        cmd = f'/Users/suzanne/opt/miniconda3/bin/python {args.base_dir}/pyfiles/DataService.py --getReportData --vehicles {ID} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
+        cmd = f'{args.pythonPath}/python {args.base_dir}/pyfiles/DataService.py --getReportData --vehicles {ID} --startDate {startDate}Z --endDate {endDate}Z --reportName {reportName}'
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # waits until p ends and saves output and errors if needed
         out, err = p.communicate()  # both strings

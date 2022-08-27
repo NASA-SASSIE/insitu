@@ -97,42 +97,50 @@ def plotSuite(args):
                 nanplotT = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Temperature'])) #mask
                 nanplotS = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Salinity'])) #mask
 
-            if not dfBuoy['Lon'].isnull().all():
-                buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Temperature'].iloc[-1]:.1f}{degree}C, {dfBuoy['Lon'].iloc[-1]:.2f}W, {dfBuoy['Lat'].iloc[-1]:.2f}N"
-                buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Salinity'].iloc[-1]:.1f}, {dfBuoy['Lon'].iloc[-1]:.2f}W, {dfBuoy['Lat'].iloc[-1]:.2f}N"
+            if not dfBuoy['Lon'][plot].isnull().all():
+                buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Temperature'][plot].iloc[-1]:.1f}{degree}C, {dfBuoy['Lon'][plot].iloc[-1]:.2f}W, {dfBuoy['Lat'][plot].iloc[-1]:.2f}N"
+                buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Salinity'][plot].iloc[-1]:.1f}, {dfBuoy['Lon'][plot].iloc[-1]:.2f}W, {dfBuoy['Lat'][plot].iloc[-1]:.2f}N"
 
-                if not dfBuoy['Temperature'].isnull().all():
-                    buoyTpts.append(ax0.scatter(dfBuoy['Lon'],dfBuoy['Lat'], dfBuoy['index'].div(10), c=dfBuoy['Temperature'],
+                if not dfBuoy['Temperature'][plot].isnull().all():
+                    buoyTpts.append(ax0.scatter(dfBuoy['Lon'][plot].iloc[-1],dfBuoy['Lat'][plot].iloc[-1], dfBuoy['index'][plot].div(10).iloc[-1], c=dfBuoy['Temperature'][plot].iloc[-1],
                                 cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),edgecolor='face', label=buoyTlabel))
+                    ax0.scatter(dfBuoy['Lon'][plot],dfBuoy['Lat'][plot], dfBuoy['index'][plot].div(10), c=dfBuoy['Temperature'][plot],
+                                cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),edgecolor='face', label=buoyTlabel)
                     if nanplotT.sum()>0:
-                        buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax0.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax0.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
 
                     if args.smallDomain is not None:
-                        buoyTptsZ.append(ax10.scatter(dfBuoy['Lon'],dfBuoy['Lat'], dfBuoy['index'].div(30), c=dfBuoy['Temperature'],
+                        buoyTptsZ.append(ax10.scatter(dfBuoy['Lon'][plot].iloc[-1],dfBuoy['Lat'][plot].iloc[-1], dfBuoy['index'][plot].div(30).iloc[-1], c=dfBuoy['Temperature'][plot].iloc[-1],
                                     cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(), edgecolor='face', label=buoyTlabel))
+                        ax10.scatter(dfBuoy['Lon'][plot],dfBuoy['Lat'][plot], dfBuoy['index'][plot].div(30), c=dfBuoy['Temperature'][plot],
+                                    cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(), edgecolor='face', label=buoyTlabel)
                         if nanplotT.sum()>0:
-                            buoyTpts.append(ax10.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                            buoyTpts.append(ax10.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                            ax10.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                            ax10.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
                 else:
                     buoyTpts.append(ax0.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel))
                     ax0.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel)
                     buoyTptsZ.append(ax10.scatter(dfBuoy['Lon'][nanplotT], dfBuoy['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=buoyTlabel))
                     ax10.scatter(dfBuoy['Lon'][nanplotT].iloc[-1], dfBuoy['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=buoyTlabel)
 
-                if not dfBuoy['Salinity'].isnull().all():
-                    buoySpts.append(ax1.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['index'].div(10), c=dfBuoy['Salinity'],
+                if not dfBuoy['Salinity'][plot].isnull().all():
+                    buoySpts.append(ax1.scatter(dfBuoy['Lon'][plot].iloc[-1], dfBuoy['Lat'][plot].iloc[-1], dfBuoy['index'][plot].div(10).iloc[-1], c=dfBuoy['Salinity'][plot].iloc[-1],
                                 cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
+                    ax1.scatter(dfBuoy['Lon'][plot], dfBuoy['Lat'][plot], dfBuoy['index'][plot].div(10), c=dfBuoy['Salinity'][plot],
+                                cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel)
                     if nanplotS.sum()>0:
-                        buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax1.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax1.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
 
                     if args.smallDomain is not None:
-                        buoySptsZ.append(ax11.scatter(dfBuoy['Lon'], dfBuoy['Lat'], dfBuoy['index'].div(30), c=dfBuoy['Salinity'],
+                        buoySptsZ.append(ax11.scatter(dfBuoy['Lon'][plot].iloc[-1], dfBuoy['Lat'][plot].iloc[-1], dfBuoy['index'][plot].div(30).iloc[-1], c=dfBuoy['Salinity'][plot].iloc[-1],
                                     cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel))
+                        ax11.scatter(dfBuoy['Lon'][plot], dfBuoy['Lat'][plot], dfBuoy['index'][plot].div(30), c=dfBuoy['Salinity'][plot],
+                                    cmap=cmap, norm=normsss, transform=ccrs.PlateCarree(), edgecolor='face', label=buoySlabel)
                         if nanplotS.sum()>0:
-                            buoySpts.append(ax11.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                            buoySpts.append(ax11.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                            ax11.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                            ax11.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
                 else:
                     buoySpts.append(ax1.scatter(dfBuoy['Lon'][nanplotS], dfBuoy['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=buoySlabel))
                     ax1.scatter(dfBuoy['Lon'][nanplotS].iloc[-1], dfBuoy['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=buoySlabel)
@@ -231,24 +239,26 @@ def plotSuite(args):
                 nanplotT = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Temperature'])) #mask
                 nanplotS = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Salinity'])) #mask
 
-            if not dfSwift['Lon'].isnull().all():
-                swiftTlabel=f"{ID}: {dfSwift['Temperature'].iloc[-1]:.1f}{degree}C, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
-                swiftSlabel=f"{ID}: {dfSwift['Salinity'].iloc[-1]:.2f}, {dfSwift['Lon'].iloc[-1]:.2f}W, {dfSwift['Lat'].iloc[-1]:.2f}N"
-                if not dfSwift['Temperature'].isnull().all():
-                    swiftTpts.append(ax0.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['index'].div(10), dfSwift['Temperature'],
+            if not dfSwift['Lon'][plot].isnull().all():
+                swiftTlabel=f"{ID}: {dfSwift['Temperature'][plot].iloc[-1]:.1f}{degree}C, {dfSwift['Lon'][plot].iloc[-1]:.2f}W, {dfSwift['Lat'][plot].iloc[-1]:.2f}N"
+                swiftSlabel=f"{ID}: {dfSwift['Salinity'][plot].iloc[-1]:.2f}, {dfSwift['Lon'][plot].iloc[-1]:.2f}W, {dfSwift['Lat'][plot].iloc[-1]:.2f}N"
+                if not dfSwift['Temperature'][plot].isnull().all():
+                    swiftTpts.append(ax0.scatter(dfSwift['Lon'][plot].iloc[-1], dfSwift['Lat'][plot].iloc[-1], dfSwift['index'][plot].div(10).iloc[-1], dfSwift['Temperature'][plot].iloc[-1],
                                cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
+                    ax0.scatter(dfSwift['Lon'][plot], dfSwift['Lat'][plot], dfSwift['index'][plot].div(10), dfSwift['Temperature'][plot],
+                               cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel)
                     if nanplotT.sum()>0:
-                        swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax0.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax0.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
 
                     if args.smallDomain is not None:
-                        swiftTptsZ.append(ax10.scatter(dfSwift['Lon'], dfSwift['Lat'], dfSwift['index'].div(30), dfSwift['Temperature'],
-                                   cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel))
-                        # swiftTptsZ.append(ax10.scatter(dfSwift['Lon'].iloc[-1], dfSwift['Lat'].iloc[-1], dfSwift['index'].iloc[-1].div(10), dfSwift['Temperature'].iloc[-1],
-                        #            cmap=cmap, norm=normsst, marker='s', edgecolor='k',transform=ccrs.PlateCarree(), label=swiftTlabel))
+                        swiftTptsZ.append(ax10.scatter(dfSwift['Lon'].iloc[-1], dfSwift['Lat'].iloc[-1], dfSwift['index'].div(10).iloc[-1], dfSwift['Temperature'].iloc[-1],
+                                   cmap=cmap, norm=normsst, marker='s', edgecolor='k',transform=ccrs.PlateCarree(), label=swiftTlabel))
+                        ax10.scatter(dfSwift['Lon'][plot], dfSwift['Lat'][plot], dfSwift['index'][plot].div(30), dfSwift['Temperature'][plot],
+                                   cmap=cmap, norm=normsst, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftTlabel)
                         if nanplotT.sum()>0:
-                            swiftTpts.append(ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                            swiftTpts.append(ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                            ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                            ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
 
                 else:
                     swiftTpts.append(ax0.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(),label=swiftTlabel))
@@ -256,19 +266,23 @@ def plotSuite(args):
                     swiftTptsZ.append(ax10.scatter(dfSwift['Lon'][nanplotT], dfSwift['Lat'][nanplotT], s=2, c='k', transform=ccrs.PlateCarree(), label=swiftTlabel))
                     ax10.scatter(dfSwift['Lon'][nanplotT].iloc[-1], dfSwift['Lat'][nanplotT].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=swiftTlabel)
 
-                if not dfSwift['Salinity'].isnull().all():
-                    swiftSpts.append(ax1.scatter(dfSwift['Lon'], dfSwift['Lat'],dfSwift['index'].div(10),dfSwift['Salinity'],
+                if not dfSwift['Salinity'][plot].isnull().all():
+                    swiftSpts.append(ax1.scatter(dfSwift['Lon'][plot].iloc[-1], dfSwift['Lat'][plot].iloc[-1],dfSwift['index'][plot].div(10).iloc[-1],dfSwift['Salinity'][plot].iloc[-1],
                                cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
+                    ax1.scatter(dfSwift['Lon'][plot], dfSwift['Lat'][plot],dfSwift['index'][plot].div(10),dfSwift['Salinity'][plot],
+                               cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel)
                     if nanplotS.sum()>0:
-                        swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax1.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
 
                     if args.smallDomain is not None:
-                        swiftSptsZ.append(ax11.scatter(dfSwift['Lon'], dfSwift['Lat'],dfSwift['index'].div(30),dfSwift['Salinity'],
+                        swiftSptsZ.append(ax11.scatter(dfSwift['Lon'][plot].iloc[-1], dfSwift['Lat'][plot].iloc[-1],dfSwift['index'][plot].div(30).iloc[-1],dfSwift['Salinity'][plot].iloc[-1],
                                    cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel))
+                        ax11.scatter(dfSwift['Lon'][plot], dfSwift['Lat'][plot],dfSwift['index'][plot].div(30),dfSwift['Salinity'][plot],
+                                   cmap=cmap, norm=normsss, marker='s', edgecolor='face',transform=ccrs.PlateCarree(), label=swiftSlabel)
                         if nanplotS.sum()>0:
-                            swiftSpts.append(ax11.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                            swiftSpts.append(ax11.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                            ax11.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                            ax11.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
                 else:
                     swiftSpts.append(ax1.scatter(dfSwift['Lon'][nanplotS], dfSwift['Lat'][nanplotS], s=2, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel))
                     ax1.scatter(dfSwift['Lon'][nanplotS].iloc[-1], dfSwift['Lat'][nanplotS].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=swiftSlabel)
@@ -365,39 +379,47 @@ def plotSuite(args):
             nanplot = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) & (np.isnan(dfwaveGlider['Temperature'])) #mask
 
 
-            if not dfwaveGlider['Lon'].isnull().all():
+            if not dfwaveGlider['Lon'][plot].isnull().all():
                 waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
                 waveGliderSlabel=f"{IDdict[ID]}: {dfwaveGlider['Salinity'].iloc[-1]:.2f} {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
-                if not dfwaveGlider.loc[plot,'Temperature'].isnull().all():
-                    waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot].div(10), dfwaveGlider['Temperature'][plot],
-                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
+                if not dfwaveGlider['Temperature'][plot].isnull().all():
+                    waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot].iloc[-1], dfwaveGlider['Lat'][plot].iloc[-1], dfwaveGlider['index'][plot].div(10).iloc[-1], dfwaveGlider['Temperature'][plot].iloc[-1],
+                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))   # the handle is the color of the marker in the legende
+                    ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot].div(10), dfwaveGlider['Temperature'][plot],
+                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel)    # the scatter plot is for the plot, of if this is the handle, the first value is the color of the marker in the legend
                     if nanplot.sum()>0:
-                        waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax0.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax0.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
                     if args.smallDomain is not None:
-                        waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot].div(30), dfwaveGlider['Temperature'][plot],
+                        waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'][plot].iloc[-1], dfwaveGlider['Lat'][plot].iloc[-1], dfwaveGlider['index'][plot].div(30).iloc[-1], dfwaveGlider['Temperature'][plot].iloc[-1],
                                    cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))
+                        ax10.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot], dfwaveGlider['Temperature'][plot],
+                                   cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel)
                         if nanplot.sum()>0:
-                             waveGliderTpts.append(ax10.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                             waveGliderTpts.append(ax10.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=20, c='k', transform=ccrs.PlateCarree(), label=''))
+                             ax10.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                             ax10.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=20, c='k', transform=ccrs.PlateCarree(), label='')
                 else:
                     waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel))
                     ax0.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel)
                     waveGliderTptsZ.append(ax10.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label=waveGliderTlabel))
                     ax10.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(),label=waveGliderTlabel)
 
-                if not dfwaveGlider.loc[plot,'Salinity'].isnull().all():
-                    waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot].div(10),dfwaveGlider['Salinity'][plot],
+                if not dfwaveGlider['Salinity'][plot].isnull().all():
+                    waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][plot].iloc[-1], dfwaveGlider['Lat'][plot].iloc[-1],dfwaveGlider['index'][plot].div(10).iloc[-1],dfwaveGlider['Salinity'][plot].iloc[-1],
                                cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
+                    ax1.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot].div(10),dfwaveGlider['Salinity'][plot],
+                               cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel)
                     if nanplot.sum()>0:
-                        waveGliderTpts.append(ax1.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot],s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                        waveGliderTpts.append(ax1.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1],s=25, c='k', transform=ccrs.PlateCarree(), label=''))
+                        ax1.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot],s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                        ax1.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1],s=25, c='k', transform=ccrs.PlateCarree(), label='')
                     if args.smallDomain is not None:
-                        waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot].div(30),dfwaveGlider['Salinity'][plot],
+                        waveGliderSptsZ.append(ax11.scatter(dfwaveGlider['Lon'][plot].iloc[-1], dfwaveGlider['Lat'][plot].iloc[-1],dfwaveGlider['index'][plot].div(30).iloc[-1],dfwaveGlider['Salinity'][plot].iloc[-1],
                                    cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel))
+                        ax11.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot],dfwaveGlider['index'][plot].div(30),dfwaveGlider['Salinity'][plot],
+                                   cmap=cmap, norm=normsss, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderSlabel)
                         if nanplot.sum()>0:
-                            waveGliderTpts.append(ax11.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot],s=2, c='k', transform=ccrs.PlateCarree(), label=''))
-                            waveGliderTpts.append(ax11.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1],s=20, c='k', transform=ccrs.PlateCarree(), label=''))
+                            ax11.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot],s=2, c='k', transform=ccrs.PlateCarree(), label='')
+                            ax11.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1],s=20, c='k', transform=ccrs.PlateCarree(), label='')
                 else:
                     waveGliderSpts.append(ax1.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel))
                     ax1.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label=waveGliderSlabel)
@@ -420,19 +442,14 @@ def plotSuite(args):
                             cmap=cmap, norm=normsst, transform=ccrs.PlateCarree(),
                             edgecolor='face', label=waveGliderSlabel))
 
-            colorT.append(colors.rgb2hex(cmap(normsst(dfwaveGlider['Temperature'].iloc[-1]))))
-            colorS.append(colors.rgb2hex(cmap(normsst(dfwaveGlider['Salinity'].iloc[-1]))))
+            # colorT.append(colors.rgb2hex(cmap(normsst(dfwaveGlider['Temperature'].iloc[-1]))))
+            # colorS.append(colors.rgb2hex(cmap(normsst(dfwaveGlider['Salinity'].iloc[-1]))))
             dfwaveGlider = dfwaveGlider[columnsWrite]
             gliderFile = f'{args.base_dir}/csv/WaveGlider_{IDdict[ID]}.csv'
             dfwaveGlider.to_csv(gliderFile,float_format='%.3f',index=False)
 
         fh.close()
 
-        # work the legends on the plots
-        # handles, legends = ax0.get_legend_handles_labels
-        # new_handles = [line2D([0],[0],marker='D',markerface]
-        # handles, labels = ax.get_legend_handles_labels()
-        # new_handles = [Line2D((0), (0), marker='D', markerfacecolor=colorT[ii], marderedgecolor='k')]
         legend30 = ax0.legend(handles=waveGliderTpts,bbox_to_anchor=(1.1, 0.3), loc=2, borderaxespad=0.,fontsize=9,title='WaveGlider Data',markerscale=1)
         frame30 = legend30.get_frame()
         frame30.set_facecolor('lightgray')
@@ -440,7 +457,6 @@ def plotSuite(args):
         leg = ax0.get_legend()
         for ii in range(len(IDs)):
             leg.legendHandles[ii].set_color('k')
-            # leg.legendHandles[ii].set_color(colorT[ii])
 
         legend130 = ax10.legend(handles=waveGliderTpts,bbox_to_anchor=(1.1, 0.2), loc=2, borderaxespad=0.,fontsize=9,title='WaveGlider Data',markerscale=1)
         frame30 = legend130.get_frame()
@@ -448,7 +464,7 @@ def plotSuite(args):
         frame30.set_edgecolor('black')
         leg = ax10.get_legend()
         for ii in range(len(IDs)):
-            leg.legendHandles[ii].set_color(colorT[ii])
+            leg.legendHandles[ii].set_color('k')
 
 
         legend31 = ax1.legend(handles=waveGliderSpts,bbox_to_anchor=(1.1, 0.3), loc=2, borderaxespad=0.,fontsize=9,title='WaveGlider Data',markerscale=1)
@@ -494,15 +510,13 @@ def plotSuite(args):
     fig1.savefig(figstr1)
     fig11.savefig(figstr11)
 
-#    couldn't get this to work: lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
-    # send figures to the ftp site
-    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; mmv -O /FTP/insitu/images/old/ *.png; bye"''')
-    # os.system('''/usr/local/bin/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; ls -l; bye"''')
-    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
-    #
-    # # send the data files (csv) to the ftp site
-    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
-    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
+# #    couldn't get this to work: lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
+#     # send figures to the ftp site
+#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
+#     #
+#     # # send the data files (csv) to the ftp site
+#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
+#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
     # os.system(f'/usr/local/bin/lftp -u sassie --password 2Icy2Fresh! -e "mirror --only-newer /Users/suzanne/SASSIE/csv/ /FTP/insitu/data" sftp://ftp.polarscience.org')
         # plt.show(block=False)
         # plt.pause(0.001)

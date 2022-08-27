@@ -474,18 +474,21 @@ def getPGbuoy(args,bid,user,strdate=None):
             slist = list(zip(sdepths,scols))
         except:
             slist=[]
+            sols=[]
         try:
             CTDsdepths = binf['CTDsdepths']
             scols = [col for col in df.columns if col.startswith('CTD-S')]
             slist.extend(list(zip(CTDsdepths,scols)))
         except:
             slist.extend([])
+            scols=[]
         try:
             HULLsdepths = binf['HULLsdepths']
             scol = [col for col in df.columns if col.startswith('Shull')]
             slist.extend(list(zip(HULLsdepths,scol)))
         except:
             slist.extend([])
+            scols=[]
 
         if len(slist)>0:
             slist.sort(key=lambda y: y[0])
@@ -587,9 +590,9 @@ def getSWIFT(args,ID,eng):
     swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
 
 # FOR REAL
-    startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    # startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     # use this starttime if needing to test code with data.
-    # startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
     endtime = ''    # leaving endtime blank, says get data up to present.
 

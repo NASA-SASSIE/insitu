@@ -97,7 +97,7 @@ def plotSuite(args):
                 nanplotT = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Temperature'])) #mask
                 nanplotS = (dfBuoy['DateTime']>=startPlot) & (dfBuoy['DateTime']<=endPlot) & (np.isnan(dfBuoy['Salinity'])) #mask
 
-            if not dfBuoy['Lon'][plot].isnull().all():
+            if not dfBuoy['Lon'].isnull().all():
                 buoyTlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Temperature'][plot].iloc[-1]:.1f}{degree}C, {dfBuoy['Lon'][plot].iloc[-1]:.2f}W, {dfBuoy['Lat'][plot].iloc[-1]:.2f}N"
                 buoySlabel = f"{binf['name'][0]}-{int(binf['name'][1]):02d}: {dfBuoy['Salinity'][plot].iloc[-1]:.1f}, {dfBuoy['Lon'][plot].iloc[-1]:.2f}W, {dfBuoy['Lat'][plot].iloc[-1]:.2f}N"
 
@@ -226,7 +226,8 @@ def plotSuite(args):
             # exit(-1)
             dfSwift = pfields.getSWIFT(args, ID, eng)
             dfSwift.reset_index(inplace=True)  # used for plotting
-            print(dfSwift.tail())
+            print(dfSwift.head())
+            # exit(-1)
             print(dfSwift.columns)
             columnsWrite = ['DateTime','Lat','Lon','Temperature','Salinity','Depth']
 
@@ -239,7 +240,7 @@ def plotSuite(args):
                 nanplotT = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Temperature'])) #mask
                 nanplotS = (dfSwift['DateTime']>=startPlot) & (dfSwift['DateTime']<=endPlot) & (np.isnan(dfSwift['Salinity'])) #mask
 
-            if not dfSwift['Lon'][plot].isnull().all():
+            if not dfSwift['Lon'].isnull().all():
                 swiftTlabel=f"{ID}: {dfSwift['Temperature'][plot].iloc[-1]:.1f}{degree}C, {dfSwift['Lon'][plot].iloc[-1]:.2f}W, {dfSwift['Lat'][plot].iloc[-1]:.2f}N"
                 swiftSlabel=f"{ID}: {dfSwift['Salinity'][plot].iloc[-1]:.2f}, {dfSwift['Lon'][plot].iloc[-1]:.2f}W, {dfSwift['Lat'][plot].iloc[-1]:.2f}N"
                 if not dfSwift['Temperature'][plot].isnull().all():
@@ -379,14 +380,14 @@ def plotSuite(args):
             nanplot = (dfwaveGlider['DateTime']>=startPlot) & (dfwaveGlider['DateTime']<=endPlot) & (np.isnan(dfwaveGlider['Temperature'])) #mask
 
 
-            if not dfwaveGlider['Lon'][plot].isnull().all():
+            if not dfwaveGlider['Lon'].isnull().all():
                 waveGliderTlabel=f"{IDdict[ID]}: {dfwaveGlider['Temperature'].iloc[-1]:.1f}{degree}C, {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
                 waveGliderSlabel=f"{IDdict[ID]}: {dfwaveGlider['Salinity'].iloc[-1]:.2f} {dfwaveGlider['Lon'].iloc[-1]:.2f}W, {dfwaveGlider['Lat'].iloc[-1]:.2f}N"
                 if not dfwaveGlider['Temperature'][plot].isnull().all():
                     waveGliderTpts.append(ax0.scatter(dfwaveGlider['Lon'][plot].iloc[-1], dfwaveGlider['Lat'][plot].iloc[-1], dfwaveGlider['index'][plot].div(10).iloc[-1], dfwaveGlider['Temperature'][plot].iloc[-1],
-                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))   # the handle is the color of the marker in the legende
+                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel))   # the handle contains the color of the marker in the legend, default color of first value of scaatter.
                     ax0.scatter(dfwaveGlider['Lon'][plot], dfwaveGlider['Lat'][plot], dfwaveGlider['index'][plot].div(10), dfwaveGlider['Temperature'][plot],
-                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel)    # the scatter plot is for the plot, of if this is the handle, the first value is the color of the marker in the legend
+                               cmap=cmap, norm=normsst, marker='D', edgecolor='face',transform=ccrs.PlateCarree(), label=waveGliderTlabel)    # the scatter plot is for the plot, or if this is the handle, the first value is the color of the marker in the legend
                     if nanplot.sum()>0:
                         ax0.scatter(dfwaveGlider['Lon'][nanplot], dfwaveGlider['Lat'][nanplot], s=2, c='k', transform=ccrs.PlateCarree(), label='')
                         ax0.scatter(dfwaveGlider['Lon'][nanplot].iloc[-1], dfwaveGlider['Lat'][nanplot].iloc[-1], s=25, c='k', transform=ccrs.PlateCarree(), label='')
@@ -512,11 +513,11 @@ def plotSuite(args):
 
 # #    couldn't get this to work: lftp -u sassie -e 'mirror --only-newer /local/path/to/data /FTP/insitu/data' sftp://ftp.polarscience.org
 #     # send figures to the ftp site
-#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
-#     #
-#     # # send the data files (csv) to the ftp site
-#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
-#     os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
+    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/images/; put {figstr0};put {figstr10};put {figstr1};put {figstr11}; bye"')
+    #
+    # # send the data files (csv) to the ftp site
+    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/insitu/data/; mput {args.base_dir}/csv/*.csv; bye"')
+    os.system(f'{args.local_lftp}/lftp sftp://sassie@ftp.polarscience.org/ --password 2Icy2Fresh! -e "cd /FTP/; mput {args.base_dir}/csv/WaveGliderPositions.csv; bye"')
     # os.system(f'/usr/local/bin/lftp -u sassie --password 2Icy2Fresh! -e "mirror --only-newer /Users/suzanne/SASSIE/csv/ /FTP/insitu/data" sftp://ftp.polarscience.org')
         # plt.show(block=False)
         # plt.pause(0.001)

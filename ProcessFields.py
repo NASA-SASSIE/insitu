@@ -12,7 +12,7 @@ import h5netcdf # needed for hdf5 format netcdf files
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request, build_opener, HTTPCookieProcessor
 from urllib.error import HTTPError, URLError
-import requests
+import requests, wget
 from nsidc_download_0081_v02 import nsidc_download_0081_v02
 import UpTempO_HeaderCodes as HC
 import UpTempO_BuoyMaster as BM
@@ -24,7 +24,9 @@ from itertools import chain
 import subprocess
 import json
 from scipy import interpolate
-import zipfile
+from zipfile import ZipFile
+from io import BytesIO
+import struct
 
 #======= Get ICE concentration map from Bremen ==============
 def getICE(args,nors='n'):
@@ -527,13 +529,17 @@ def getSWIFTdirectly(args,ID,eng):
 
     swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
 
+
 # FOR REAL
-    startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    # startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     # use this starttime if needing to test code with data.
-    startswift = dt.datetime(2021,8,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
     endtime = ''    # leaving endtime blank, says get data up to present.
 
+    # swiftfile = f'buoy-SWIFT {ID}-start-{starttime}-end-None.mat'
+
+    # # get locations of swift float
     # strcommand='http://swiftserver.apl.washington.edu/kml?action=kml&'
     # strcommand+=f'buoy_name=SWIFT+{ID}&start={starttime}&end={endtime}&format=json'
     # sw=urllib.request.urlopen(strcommand)  # downloads file with minimal header if bid file not unavailable
@@ -546,11 +552,139 @@ def getSWIFTdirectly(args,ID,eng):
     # print()
     # print(data['buoys'][0]['data'][0])
 
-    strcommand='http://swiftserver.apl.washington.edu/services/buoy?action=get_data&buoy_name='
-    strcommand+=f'SWIFT{ID}&start={starttime}&end={endtime}&format=zip'
-    # strcommand+=f'microSWIFT{ID}&start={starttime}&end={endtime}&format=zip'
-    # request = requests.get(url)
-    # file = zipfile.ZipFile(BytesIO(request.content))
+    strcommand = 'http://swiftserver.apl.washington.edu/services/buoy?action=get_data&buoy_name='
+    strcommand += f'SWIFT+{ID}&start={starttime}&end={endtime}&format=zip'
+    print('strcommand',strcommand)
+
+    req = requests.get(strcommand)
+    print(req)
+    print()
+    # print(req.content)
+    filename = f'{args.base_dir}/swift_telemetry/SWIFT{ID}.zip'
+    with open(filename,'wb') as output_file:
+        output_file.write(req.content)
+
+    with ZipFile(filename,'r') as zipObj:
+        print(f'{args.base_dir}/swift_telemetry')
+        binfiles = zipObj.namelist()
+        for ii,binfile in enumerate(binfiles):
+            if ii<10:
+                print(binfile)
+                zipObj.extract(binfile,f'{args.base_dir}/swift_telemetry/swift{ID}')
+                # from readSWIFT_SBD.m code
+                with open(f'{args.base_dir}/swift_telemetry/swift{ID}/{binfile}','rb') as bf:
+                    payloadtype = bf.read(1)  # this is an int ?
+                    print(payloadtype,np.int(payloadtype),type(payloadtype))
+                    print()
+                    if np.int(payloadtype)<5:
+                        print('Not Version v3.3 (2015) or above.  Use older read-in code.')
+                        # not going anywhere here, assuming payload is 5 or higher (assumoing zero base)
+                    print(payloadtype.decode('UTF-8'))
+
+                    CTcounter = 0
+                    picflag = False
+                    while True:
+                        buoytype = int.from_bytes(bf.read(1),'little')   # these are strings   ?
+                        buoyport = int.from_bytes(bf.read(1),'little')
+                        buoysize = int.from_bytes(bf.read(1),'little')
+                        print(buoytype, buoyport, buoysize)
+                        if buoytype == 0 and buoysize>0:
+                            pass
+                        elif buoytype == 1 and buoysize>0:
+                            pass
+                        elif buoytype == 2 and buoysize>0:
+                            pass
+                        elif buoytype == 3 and buoysize>0:
+                            pass
+                            # print(bf.read(4))
+                            # exit(-1)
+                            # sigwaveheight[CTcounter] = struct.unpack('f',bf.read(4))  # sig wave height
+                            # print('sig wave ht',sigwaveheight[CTcounter])
+                            # peakwaveperiod[CTcounter] = struct.unpack(bf.read(1))  # dominant period
+                            # peakwavedirT[CTcounter] = struct.unpack(bf.read(1))  # dominant wave direction
+                            # wavespectra_energy[CTcounter] = struct.unpack(bf.read(42))  # spectral energy density of sea surface elevation
+                            # wavespectra_freq[CTcounter] = struct.unpack(bf.read(42))  # frequency
+                            # wavespectra_a1[CTcounter] = struct.unpack(bf.read(42))  # spectral moment
+                            # wavespectra_b1[CTcounter] = struct.unpack(bf.read(42))  # spectral moment
+                            # wavespectra_a2[CTcounter] = struct.unpack(bf.read(42))  # spectral moment
+                            # wavespectra_b2[CTcounter] = struct.unpack(bf.read(42))  # spectral moment
+                            # lat = struct.unpack(bf.read(1)) # Latitude
+                            # lon = struct.unpack(bf.read(1)) # Longitude
+                            # print('line 607',lat,lon)
+                            # exit(-1)
+                            # if buoysize > 1200 & buoysize < 10000:
+                            #     SWIFT.wavehistogram.vertacc = fread(fid,32,'float'); % vertical accelerations
+                            #     SWIFT.wavehistogram.vertaccbins = fread(fid,32,'float'); % bins centers of vertical accelerations
+                            #     SWIFT.wavehistogram.horacc = fread(fid,32,'float'); % horizontal accelerations
+                            #     SWIFT.wavehistogram.horaccbins = fread(fid,32,'float'); % bins centers of horizontal accelerations
+                            #     SWIFT.wavehistogram.horspd = fread(fid,32,'float'); % horizontal speeds
+                            #     SWIFT.wavehistogram.horspdbins = fread(fid,32,'float'); % bin centers of horizontal speeds
+                            # else
+                            # end
+                            # SWIFTversion = 3;
+                            #
+
+
+                        elif buoytype == 4 and buoysize>0:
+                            ConductivityMean[CTcounter] = struct.unpack(bf.read(1))
+                            watertemp[CTcounter] = struct.unpack(bf.read(1))
+                            salinity[CTcounter] = struct.unpack(bf.read(1))
+                            # CTcounter = CTcounter + 1;
+
+                            if CTcounter == 0:  #add field for CT depths (temp and sal), meters
+                                CTdepth[0] = .18
+                            elif CTcounter == 1:
+                                CTdepth[1] = .66
+                            elif CTcounter == 2:
+                                CTdepth[2] = 1.22
+                            end
+
+                        exit(-1)
+
+
+
+
+
+
+        # zipObj.extractall(f'{args.base_dir}/swift_telemetry')
+
+    # sw=urllib.request.urlopen(strcommand)  # downloads file with minimal header if bid file not unavailable
+    # data=sw.read()
+    # print('line 560',data)
+    # encoding = sw.info().get_content_charset('utf-8')
+    # data = json.loads(data.decode(encoding))
+    # print(data)
+    # print()
+    # print(data['buoys'][0]['data'][0])
+    exit(-1)
+
+
+
+
+
+    # wget.download(strcommand)  # doesn't work here.
+    # filename = f'Swift{ID}.zip'
+
+    # # strcommand+=f'microSWIFT{ID}&start={starttime}&end={endtime}&format=zip'  # in case we want data from a microswift
+    # req = requests.get(strcommand, stream=True)
+    # req.raise_for_status()
+    # print('req',req)
+    # with open(filename,'wb') as f:
+    #     f.write(req.content)
+    # exit(-1)
+
+    # Writing the file to the local file system
+    # with open(filename,'wb') as output_file:
+    #     output_file.write(req.content)
+    # print('Downloading Completed')
+    # exit(-1)
+    # zfile = zipfile.ZipFile(BytesIO(req.content))
+    # print(zfile)
+    # zfile.extractall(filename)
+    # # print(zfile)
+    # exit(-1)
+
+        # filecsv = f'{swiftpath}/csv/{os.path.splitext(swiftfile)[0]}.csv'
 
     # r = urllib.request.urlopen(strcommand)
     # with zipfile.ZipFile(BytesIO(r.read())) as z:

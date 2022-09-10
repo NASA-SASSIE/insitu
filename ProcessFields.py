@@ -491,7 +491,7 @@ def getPGbuoy(args,bid,user,strdate=None):
         except:
             slist.extend([])
             scols=[]
-
+        print(slist,'line 494')
         if len(slist)>0:
             slist.sort(key=lambda y: y[0])
             scols = [item[1] for item in slist]
@@ -502,12 +502,17 @@ def getPGbuoy(args,bid,user,strdate=None):
                     scolsdrop.append(item[1])
             df.drop(columns=scolsdrop,inplace=True)
             scols = [col for col in scols if col not in scolsdrop]
-            # keep shallowest valid measurement
-            df['DepthS'] = slist[0][0]
-            for ii in range(1,len(scols)):
-                df.loc[np.isnan(df[scols[0]]),'DepthS'] = slist[ii][0]
-                df[scols[0]].fillna(df[scols[ii]],inplace=True)
-                df.drop(columns=scols[ii],inplace=True)
+            if len(scols)==0:
+                df['Salinity'] = np.nan
+                df['DepthS'] = np.nan
+            else:
+                # keep shallowest valid measurement
+                df['DepthS'] = slist[0][0]
+                print('line 507',slist,scols)
+                for ii in range(1,len(scols)):
+                    df.loc[np.isnan(df[scols[0]]),'DepthS'] = slist[ii][0]
+                    df[scols[0]].fillna(df[scols[ii]],inplace=True)
+                    df.drop(columns=scols[ii],inplace=True)
         else:
             df['Salinity'] = np.nan
             df['DepthS'] = np.nan
@@ -724,9 +729,9 @@ def getSWIFT(args,ID,eng):
     swiftpath = f"'{args.base_dir}/swift_telemetry'"  #need single quotes for space in Google Drive dir name
 
 # FOR REAL
-    # startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    startswift = dt.datetime(2022,8,20) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     # use this starttime if needing to test code with data.
-    startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
+    # startswift = dt.datetime(2017,1,1) #today - dt.timedelta(hours=int(args.hourstoPlot))  #### we will this line when new data are available.
     starttime = f'{startswift.year}-{startswift.month:02d}-{startswift.day:02d}T00:00:00'
     endtime = ''    # leaving endtime blank, says get data up to present.
 
